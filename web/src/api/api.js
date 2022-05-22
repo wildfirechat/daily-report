@@ -20,8 +20,8 @@ export default {
     async deleteReport(day) {
         return axios.delete('/user/report/' + day)
     },
-    async getReportList() {
-        return axios.get('/user/report_list', param)
+    async getReportList(count, offset) {
+        return axios.get('/user/report_list' + `?count=${count}&offset=${offset}`)
     }
 
     // TODO more
