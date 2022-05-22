@@ -1,24 +1,24 @@
 <template>
     <div id="app">
         <SplashView v-if="status === 0"/>
-        <WorkReport v-else-if="status === 1" :account="account"/>
-        <ErrorPage v-else/>
+        <ReportView v-else-if="status === 1" :account="account"/>
+        <ErrorView v-else/>
     </div>
 </template>
 
 <script>
-import WorkReport from './components/WorkReportPage.vue'
-import SplashView from "@/components/SplashPage";
-import ErrorPage from "@/components/ErrorPage";
+import ReportView from './components/ReportView.vue'
+import SplashView from "@/components/SplashView";
+import ErrorView from "@/components/ErrorView";
 import api from "@/api/api";
 import wf from "@/jssdk/wf";
 
 export default {
     name: 'App',
     components: {
-        WorkReport,
+        ReportView,
         SplashView,
-        ErrorPage,
+        ErrorView,
     },
     data() {
         return {

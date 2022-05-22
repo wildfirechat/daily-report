@@ -38,7 +38,7 @@ import Report from "@/model/report";
 import api from "@/api/api";
 
 export default {
-    name: 'WorkReportPage',
+    name: 'NewReportView',
     components: {Divider},
     props: {
         account: {
