@@ -1,13 +1,13 @@
 <template>
     <div id="app">
         <SplashView v-if="status === 0"/>
-        <ReportView v-else-if="status === 1" :account="account"/>
+        <NewReportView v-else-if="status === 1" :account="account"/>
         <ErrorView v-else/>
     </div>
 </template>
 
 <script>
-import ReportView from './components/ReportView.vue'
+import NewReportView from './components/NewReportView.vue'
 import SplashView from "@/components/SplashView";
 import ErrorView from "@/components/ErrorView";
 import api from "@/api/api";
@@ -16,7 +16,7 @@ import wf from "@/jssdk/wf";
 export default {
     name: 'App',
     components: {
-        ReportView,
+        NewReportView,
         SplashView,
         ErrorView,
     },
