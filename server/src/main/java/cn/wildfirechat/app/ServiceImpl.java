@@ -211,7 +211,7 @@ public class ServiceImpl implements Service {
         List<String> reportTo = new ArrayList<>(report.reportTo);
         reportTo.add(getUserId());
 
-        RichNotificationContentBuilder builder = RichNotificationContentBuilder.newBuilder("日报提交通知", messageContent, "https://www.baidu.com")
+        RichNotificationContentBuilder builder = RichNotificationContentBuilder.newBuilder("日报提交通知", messageContent, "https://report.wildfirechat.cn/report?day=" + report.day)
                 .exName("日报小助手")
                 .addItem("员工", sendName, "#173177")
                 .addItem("标题", report.title, "#173177")

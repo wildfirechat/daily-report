@@ -75,8 +75,8 @@ public class ApiController {
     获取当前用户的报告列表
      */
     @GetMapping(value = "user/report_list", produces = "application/json;charset=UTF-8")
-    public Object getReportList(@RequestBody PojoCountOffset countOffset) {
-        return mService.getReportList(countOffset.count, countOffset.offset);
+    public Object getReportList(@RequestParam int count, @RequestParam int offset) {
+        return mService.getReportList(count, offset);
     }
 
     /*
