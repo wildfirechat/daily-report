@@ -45,10 +45,16 @@ export default {
     },
     methods: {
         writeReport() {
-            wf.openUrl(location.href + 'newReport', {external: true})
+            // 开发调试时使用
+            //wf.openUrl(location.href + 'newReport', {external: true})
+            // 线上
+            wf.openUrl('https://report.wildfirechat.cn/newReport.html', {external: true})
         },
         showReportDetail(report) {
-            wf.openUrl(location.href + 'report' + '?day=' + report.day, {external: true})
+            // 开发调试时使用
+            //wf.openUrl(location.href + 'report' + '?day=' + report.day, {external: true})
+            // 线上
+            wf.openUrl('https://report.wildfirechat.cn/report.html' + '?day=' + report.day, {external: true})
         },
         reportTitle(report) {
             let day = new Date(report.day);
