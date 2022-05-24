@@ -22,6 +22,9 @@ export default {
     },
     async getReportList(count, offset) {
         return axios.get('/user/report_list' + `?count=${count}&offset=${offset}`)
+    },
+    async getReport(day) {
+        return axios.get('/user/report/' + day)
     }
 
     // TODO more

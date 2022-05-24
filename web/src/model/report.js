@@ -5,6 +5,7 @@ export default class Report {
     tomorrowPlan;
     requirement;
     reportTo = [];
+    day = 1653314400000;
     ccTo = [];
     reportToGroup = [];
     ccToGroup = [];
@@ -22,10 +23,8 @@ export default class Report {
             }
         }
 
-        if (!this.reportTo || this.reportTo.length === 0){
-            return {
-
-            }
+        if (!this.reportTo || this.reportTo.length === 0) {
+            return {}
         }
     }
 }

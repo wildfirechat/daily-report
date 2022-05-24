@@ -1,4 +1,4 @@
-body {
+* {
     margin: 0;
     padding: 0;
 }
@@ -20,6 +20,10 @@ body {
     content: "";
     visibility: hidden;
     height: 0;
+}
+
+ul, li {
+    list-style: none;
 }
 
 .clearfix {

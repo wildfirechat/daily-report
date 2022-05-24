@@ -1,11 +1,14 @@
-import {Biz} from "./biz";
+import Biz from "./biz";
+import Navigation from "@/jssdk/navigation";
 
-const bridge =  window.__wf_bridge_ ? window.__wf_bridge_ : require('dsbridge');
+const bridge = window.__wf_bridge_ ? window.__wf_bridge_ : require('dsbridge');
+
 export class Wf {
     biz = new Biz();
+    navigation = new Navigation();
 
-    openUrl(url) {
-        bridge.call('openUrl', url);
+    openUrl(url, options) {
+        bridge.call('openUrl', {url, ...options});
     }
 
     ready(callback) {

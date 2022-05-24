@@ -1,5 +1,5 @@
 import Vue from 'vue'
-import App from './pages/ReportListPage'
+import App from './pages/ReportPage'
 
 Vue.config.productionTip = false
 

@@ -1,22 +1,20 @@
 <template>
-    <div id="app">
+    <div id="base-container">
         <SplashView v-if="status === 0"/>
-        <NewReportView v-else-if="status === 1" :account="account"/>
+        <slot v-else-if="status === 1" :account="account"/>
         <ErrorView v-else/>
     </div>
 </template>
 
 <script>
-import NewReportView from './components/NewReportView.vue'
 import SplashView from "@/components/SplashView";
 import ErrorView from "@/components/ErrorView";
 import api from "@/api/api";
 import wf from "@/jssdk/wf";
 
 export default {
-    name: 'App',
+    name: 'BaseLayout',
     components: {
-        NewReportView,
         SplashView,
         ErrorView,
     },
@@ -29,7 +27,6 @@ export default {
     },
 
     created() {
-        document.title = '工作日志';
         this.getAccount();
         wf.ready(() => {
             // native 认证 web 成功，可以开始调用 wf.js 里面的 api
@@ -104,15 +101,14 @@ export default {
 </script>
 
 <style lang="css" scoped>
-@import "./assets/main.css";
+@import "../assets/main.css";
 
-#app {
+#base-container {
     font-family: Avenir, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-align: center;
     color: #2c3e50;
-    padding-top: 10px;
     height: 100%;
 }
 </style>

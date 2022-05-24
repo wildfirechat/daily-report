@@ -2,7 +2,7 @@ import Axios from 'axios'
 // axios实例
 const instance = Axios.create({
     // 针对实际情况进行修改
-    baseURL: './api',
+    baseURL: 'https://report.wildfirechat.cn/api',
     withCredentials: true,
     headers: {
         'Content-Type': 'application/json;charset=utf-8',

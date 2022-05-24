@@ -20,7 +20,7 @@
             <p>&gt;</p>
         </div>
         <Divider/>
-        <div class="option-item">
+        <div class="option-item" style="display: none" @click="close">
             <p>{{ `发送到群${groupTargetDesc}` }}</p>
             <p>&gt;</p>
         </div>
@@ -53,6 +53,10 @@ export default {
             report: new Report(this.account)
         }
     },
+
+    created() {
+        console.log('NewReportView', location.href)
+    },
     methods: {
         chooseContacts() {
             wf.biz.chooseContacts({max: 1}, (userInfos) => {
@@ -64,6 +68,10 @@ export default {
             }, (err) => {
                 console.log('chooseContacts failed', err);
             })
+        },
+
+        close() {
+            wf.navigation.close();
         },
 
         submitReport() {
@@ -84,6 +92,7 @@ export default {
                 this.$refs.submitButton.textContent = '提交成功';
                 this.$refs.submitButton.disabled = true;
                 wf.toast('日报提交成功')
+                wf.navigation.close()
             }).catch(reason => {
                 wf.toast('日报提交失败 ' + reason);
             })

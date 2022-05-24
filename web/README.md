@@ -27,3 +27,8 @@ npm run lint
 
 ### Customize configuration
 See [Configuration Reference](https://cli.vuejs.org/config/).
+
+### 一些说明
+1. 为什么不用```vuex```等?
+
+   A：因为跨页面，数据没法共享
