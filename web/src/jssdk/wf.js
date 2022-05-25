@@ -8,7 +8,13 @@ export class Wf {
     navigation = new Navigation();
 
     openUrl(url, options) {
-        bridge.call('openUrl', {url, ...options});
+        if (window.__wf_bridge_) {
+            // pc
+            bridge.call('openUrl', {url, ...options});
+        } else {
+            // mobile
+            bridge.call('openUrl', url);
+        }
     }
 
     ready(callback) {
