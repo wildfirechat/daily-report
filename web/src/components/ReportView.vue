@@ -1,6 +1,6 @@
 <template>
     <div>
-        <p v-if="!report">日报不能存在</p>
+        <p v-if="!report">日报不存在</p>
         <div v-else class="report-container">
             <p>{{ reportTitle(report) }}</p>
             <div class="report-item">
