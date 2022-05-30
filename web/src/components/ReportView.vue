@@ -20,21 +20,39 @@
 </template>
 
 <script>
+import api from "@/api/api";
+
 export default {
     name: "ReportView",
-    props: {
-        report: {
-            type: Object,
-            required: false,
+    data() {
+        return {
+            report: {},
         }
     },
     created() {
         console.log('ReportView', location.href)
+        this.getReport();
     },
     methods: {
         reportTitle(report) {
             let day = new Date(report.day);
             return day.toLocaleDateString();
+        },
+
+        getReport() {
+            let day = this._getQuery(location.href, 'day')
+            api.getReport(day).then(report => {
+                this.report = report;
+            })
+        },
+
+        _getQuery(url, key) {
+            let query = url.split('?');
+            if (query && query.length > 1) {
+                let params = new URLSearchParams(query[1]);
+                return params.get(key);
+            }
+            return null;
         },
     }
 }
