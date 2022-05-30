@@ -171,10 +171,12 @@ public class ServiceImpl implements Service {
         }
         return null;
     }
+
     public String getDisplayName() {
         Subject subject = SecurityUtils.getSubject();
-        return (String)subject.getSession().getAttribute("displayName");
+        return (String) subject.getSession().getAttribute("displayName");
     }
+
     @Override
     public RestResult getAccount() {
         Subject subject = SecurityUtils.getSubject();
@@ -200,7 +202,7 @@ public class ServiceImpl implements Service {
         String messageContent;
         String sendName = report.userId;
         String displayName = getDisplayName();
-        if(!StringUtils.isNullOrEmpty(displayName)) {
+        if (!StringUtils.isNullOrEmpty(displayName)) {
             sendName = displayName;
         }
         if (isExist) {
@@ -210,14 +212,14 @@ public class ServiceImpl implements Service {
         }
         List<String> reportTo = new ArrayList<>(report.reportTo);
         reportTo.add(getUserId());
-        RichNotificationContentBuilder builder = RichNotificationContentBuilder.newBuilder("日报提交通知", messageContent, "https://report.wildfirechat.cn/report.html?day=" + report.day)
-                .exName("日报小助手")
-                .addItem("员工", sendName, "#173177")
-                .addItem("标题", report.title, "#173177")
-                .addItem("内容摘要", report.content.length() > 40 ? report.content.substring(0, 40)+"..." : report.content, "#173177")
-                .addItem("明日计划", report.tomorrowPlan.length() > 40 ? report.tomorrowPlan.substring(0, 40)+"..." : report.tomorrowPlan, "#173177");
-        if(!StringUtils.isNullOrEmpty(report.requirement)) {
-            builder.addItem("需要协助", report.requirement.length() > 40 ? report.requirement.substring(0, 40)+"..." : report.requirement, "#173177");
+        RichNotificationContentBuilder builder = RichNotificationContentBuilder.newBuilder("日报提交通知", messageContent, "https://report.wildfirechat.cn/report.html?userId=" + report.userId + "&day=" + report.day)
+            .exName("日报小助手")
+            .addItem("员工", sendName, "#173177")
+            .addItem("标题", report.title, "#173177")
+            .addItem("内容摘要", report.content.length() > 40 ? report.content.substring(0, 40) + "..." : report.content, "#173177")
+            .addItem("明日计划", report.tomorrowPlan.length() > 40 ? report.tomorrowPlan.substring(0, 40) + "..." : report.tomorrowPlan, "#173177");
+        if (!StringUtils.isNullOrEmpty(report.requirement)) {
+            builder.addItem("需要协助", report.requirement.length() > 40 ? report.requirement.substring(0, 40) + "..." : report.requirement, "#173177");
         }
         taskExecutor.submit(() -> {
             sendTextMessage(reportTo, builder.build());
@@ -237,11 +239,15 @@ public class ServiceImpl implements Service {
     }
 
     @Override
-    public RestResult getReport(long day) {
-        if(day <= 0) {
+    public RestResult getReport(String userId, long day) {
+        if (day <= 0) {
             day = getToday();
         }
-        Optional<Report> reportOptional = reportRepository.findById(new UserDayId(getUserId(), day));
+        if (userId == null){
+            // 自己
+            userId = getUserId();
+        }
+        Optional<Report> reportOptional = reportRepository.findById(new UserDayId(userId, day));
         return reportOptional.map(report -> RestResult.ok(convertReport(report))).orElseGet(() -> RestResult.error(ERROR_NOT_EXIST));
 
     }
@@ -250,7 +256,7 @@ public class ServiceImpl implements Service {
     public RestResult getReportList(int count, int offset) {
         List<PojoReport> out = new ArrayList<>();
         List<Report> list = reportRepository.getUserReports(getUserId(), count, offset);
-        if(list != null) {
+        if (list != null) {
             list.forEach(report -> out.add(convertReport(report)));
         }
         return RestResult.ok(out);

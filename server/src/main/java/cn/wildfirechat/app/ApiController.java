@@ -56,11 +56,11 @@ public class ApiController {
     }
 
     /*
-    删除报告
+    获取报告
      */
-    @GetMapping(value = "user/report/{day}", produces = "application/json;charset=UTF-8")
-    public Object getReport(@PathVariable("day") long day) {
-        return mService.getReport(day);
+    @GetMapping(value = "user/report/{userId}/{day}", produces = "application/json;charset=UTF-8")
+    public Object getReport(@PathVariable("userId") String userId, @PathVariable("day") long day) {
+        return mService.getReport(userId, day);
     }
 
     /*

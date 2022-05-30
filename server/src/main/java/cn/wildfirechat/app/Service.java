@@ -13,7 +13,7 @@ public interface Service {
     RestResult favApplication(String targetId);
     RestResult createReport(PojoReport report);
     RestResult deleteReport(long day);
-    RestResult getReport(long day);
+    RestResult getReport(String userId, long day);
     RestResult getReportList(int count, int offset);
     RestResult getConfigData();
 }

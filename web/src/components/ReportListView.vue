@@ -54,7 +54,7 @@ export default {
             // 开发调试时使用
             //wf.openUrl(location.href + 'report' + '?day=' + report.day, {external: true})
             // 线上
-            wf.openUrl('https://report.wildfirechat.cn/report.html' + '?day=' + report.day, {external: true})
+            wf.openUrl(`https://report.wildfirechat.cn/report.html?userId=${report.userId}&day=${report.day}`, {external: true})
         },
         reportTitle(report) {
             let day = new Date(report.day);

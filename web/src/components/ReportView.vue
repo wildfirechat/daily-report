@@ -40,8 +40,9 @@ export default {
         },
 
         getReport() {
+            let userId = this._getQuery(location.href, 'userId')
             let day = this._getQuery(location.href, 'day')
-            api.getReport(day).then(report => {
+            api.getReport(userId, day).then(report => {
                 this.report = report;
             })
         },
