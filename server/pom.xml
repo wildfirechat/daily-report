@@ -5,7 +5,7 @@
 
 	<groupId>cn.wildfirechat</groupId>
 	<artifactId>daily-report</artifactId>
-	<version>0.1</version>
+	<version>0.1.0</version>
 	<packaging>jar</packaging>
 
 	<name>daily-report</name>
