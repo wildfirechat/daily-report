@@ -5,6 +5,7 @@
 </template>
 
 <script>
+import '../jssdk/bridgeClientImpl.uni'
 import ReportView from "@/components/ReportView";
 import BaseLayout from "@/components/BaseLayout";
 
