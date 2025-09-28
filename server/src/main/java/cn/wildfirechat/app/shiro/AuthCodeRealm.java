@@ -4,7 +4,6 @@ package cn.wildfirechat.app.shiro;
 import cn.wildfirechat.common.ErrorCode;
 import cn.wildfirechat.pojos.OutputApplicationUserInfo;
 import cn.wildfirechat.sdk.ChannelServiceApi;
-import cn.wildfirechat.sdk.UserAdmin;
 import cn.wildfirechat.sdk.model.IMResult;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.AuthenticationException;
@@ -16,6 +15,8 @@ import org.apache.shiro.authz.SimpleAuthorizationInfo;
 import org.apache.shiro.realm.AuthorizingRealm;
 import org.apache.shiro.subject.PrincipalCollection;
 import org.apache.shiro.subject.Subject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +26,8 @@ import java.util.Set;
 
 @Service
 public class AuthCodeRealm extends AuthorizingRealm {
+
+    private static final Logger LOG = LoggerFactory.getLogger(AuthCodeRealm.class);
 
     @Autowired
     private AuthCodeMatcher authCodeMatcher;
@@ -67,6 +70,7 @@ public class AuthCodeRealm extends AuthorizingRealm {
                 }
             } catch (Exception e) {
                 e.printStackTrace();
+                LOG.error("applicationGetUserInfo error", e);
             }
         }
 
