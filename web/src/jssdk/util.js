@@ -1,5 +1,5 @@
 import {initUniappBridge} from "./bridgeClientImpl.uni";
-import { initWeb } from './bridgeClientImpl';
+import { initWeb } from './bridgeClientImpl.web';
 
 export function _handleNativeCall(successCB, failCB) {
     return (result) => {
