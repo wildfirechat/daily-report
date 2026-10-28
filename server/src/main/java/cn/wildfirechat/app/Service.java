@@ -1,6 +1,5 @@
 package cn.wildfirechat.app;
 
-
 import cn.wildfirechat.app.pojo.PojoReport;
 
 import javax.servlet.http.HttpServletResponse;
@@ -15,5 +14,10 @@ public interface Service {
     RestResult deleteReport(long day);
     RestResult getReport(String userId, long day);
     RestResult getReportList(int count, int offset);
+    RestResult getReportPage(int count, int offset, String keyword, Long startDay, Long endDay);
+    RestResult getReceivedReports(int count, int offset, String keyword, Long startDay, Long endDay);
+    RestResult getReportFeed(int count, String keyword, Long startDay, Long endDay, Long cursorDay);
+    RestResult getReceivedFeed(int count, String keyword, Long startDay, Long endDay, Long cursorDay, String cursorUserId);
+    RestResult getReportStats();
     RestResult getConfigData();
 }

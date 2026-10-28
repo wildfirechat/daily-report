@@ -10,8 +10,10 @@ const toParam = argv[3]
 
 console.log("Try copy " + fromParam + " to " + toParam + "\n\n")
 
-var copydir = require('copy-dir');
+const fs = require('fs');
+const copydir = require('copy-dir');
 
+fs.rmSync(toParam, {recursive: true, force: true});
 copydir.sync(fromParam, toParam, {
   utimes: true,  // keep add time and modify time
   mode: true,    // keep file mode

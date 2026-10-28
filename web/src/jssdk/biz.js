@@ -12,7 +12,7 @@ export default class Biz {
 
     chooseContacts(options, successCB, failCB) {
         options = options ? options : {};
-        options.max = 3;
+        options.max = options.max || 20;
         bridge().call('chooseContacts', options, _handleNativeCall(successCB, failCB));
     }
 }

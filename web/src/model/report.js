@@ -1,15 +1,17 @@
 export default class Report {
     userId;
-    title;
-    content;
-    tomorrowPlan;
-    requirement;
+    title = '日报';
+    content = '';
+    tomorrowPlan = '';
+    requirement = '';
     reportTo = [];
-    day = 1653314400000;
+    day = Date.now();
     ccTo = [];
     reportToGroup = [];
     ccToGroup = [];
-
+    displayName = '';
+    createdAt = null;
+    updatedAt = null;
 
     constructor(userId) {
         this.userId = userId;
@@ -17,14 +19,14 @@ export default class Report {
 
     valid() {
         if (!this.content || !this.content.trim()) {
-            return {
-                code: -1,
-                msg: '汇报内容不能为空'
-            }
+            return {code: -1, msg: '今日工作总结不能为空'}
         }
-
+        if (this.title && this.title.length > 64) {
+            return {code: -1, msg: '标题不能超过 64 个字符'}
+        }
         if (!this.reportTo || this.reportTo.length === 0) {
-            return {}
+            return {code: -1, msg: '请选择汇报对象'}
         }
+        return {code: 0}
     }
 }

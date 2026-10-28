@@ -1,7 +1,5 @@
 <template>
-    <div style="height: 100%; text-align: center;">
-        自动登录中，请稍后...
-    </div>
+    <div class="state-view">正在安全登录，请稍候...</div>
 </template>
 
 <script>
@@ -9,7 +7,3 @@ export default {
     name: "SplashView"
 }
 </script>
-
-<style scoped>
-
-</style>

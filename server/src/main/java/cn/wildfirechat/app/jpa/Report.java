@@ -5,7 +5,9 @@ import java.io.Serializable;
 
 @Entity
 @IdClass(UserDayId.class)
-@Table(name = "t_report")
+@Table(name = "t_report", indexes = {
+	@Index(name = "idx_report_user_day_updated", columnList = "userId,day,updatedAt")
+})
 public class Report implements Serializable {
 	@Id
 	@Column(length = 64)
@@ -38,5 +40,12 @@ public class Report implements Serializable {
 
 	@Column(length = 2048)
 	public String ccToGroup;
+
+	@Column(length = 128)
+	public String displayName;
+
+	public Long createdAt;
+
+	public Long updatedAt;
 	
 }

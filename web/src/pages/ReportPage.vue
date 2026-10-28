@@ -1,6 +1,6 @@
 <template>
-    <BaseLayout>
-        <ReportView/>
+    <BaseLayout v-slot="{account}">
+        <ReportView :account="account"/>
     </BaseLayout>
 </template>
 
@@ -11,20 +11,9 @@ import BaseLayout from "@/components/BaseLayout";
 
 export default {
     name: 'ReportPage',
-    components: {
-        ReportView,
-        BaseLayout,
-    },
-
+    components: {BaseLayout, ReportView},
     created() {
-        document.title = '日志详情';
-    },
-
-    methods: {},
-
-    computed: {}
+        document.title = '日报详情';
+    }
 }
 </script>
-
-<style lang="css" scoped>
-</style>

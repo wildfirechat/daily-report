@@ -6,7 +6,7 @@
 
 <script>
 export default {
-    name: "Divider",
+    name: "SectionDivider",
     props: {
         height: {
             type: String,

@@ -26,7 +26,7 @@ export function bridge() {
     // preload
     console.log('init bridge-');
     console.log('userAgent', navigator.userAgent);
-    if((process && process.versions && process.versions.electron) || navigator.userAgent.toLowerCase().indexOf('electron') >= 0){
+    if((typeof process !== 'undefined' && process.versions && process.versions.electron) || navigator.userAgent.toLowerCase().indexOf('electron') >= 0){
         console.log('js bridge, electron')
         // electron pc 端，注入了 window.__wf_bridge_
         return window.__wf_bridge_;

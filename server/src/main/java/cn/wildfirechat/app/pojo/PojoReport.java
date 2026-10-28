@@ -15,4 +15,7 @@ public class PojoReport {
     public List<String> ccTo;
     public List<String> reportToGroup;
     public List<String> ccToGroup;
+    public String displayName;
+    public Long createdAt;
+    public Long updatedAt;
 }

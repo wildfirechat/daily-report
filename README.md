@@ -1,41 +1,116 @@
 # 野火日报服务
-野火日报服务是[野火开放平台](https://github.com/wildfirechat/open-platform)中的一个demo应用，用来演示如何开发或则对接第三方应用系统。
 
-## 创建应用
-在野火开放平台创建应用，填写预先分配给*应用地址*，包括移动端地址、桌面端地址、回调/服务端地址（如果不配置的话，需要认证的工作台应用，将不能正常登录），创建完成后得到appid和appsecret。
+野火日报服务是[野火开放平台](https://github.com/wildfirechat/open-platform)中的应用示例，包含 Spring Boot 后端和 Vue 3 移动端页面，演示野火授权登录、联系人选择及消息通知。
 
+## 功能
 
-## Demo前端的编译
-进入到web目录，执行如下命令：
+- 新建、编辑和删除日报，支持选择汇报日期、汇报对象和抄送对象。
+- 未提交草稿自动保存在当前浏览器中，编辑时自动回填原日报。
+- “我的日报”和“汇报箱”，支持关键词、日期范围筛选及分页加载。
+- 今日提交状态、本月提交数、累计提交数和收到日报数统计。
+- 作者、直接汇报对象和抄送对象可查看详情；只有作者可以修改或删除。
+- 保存后异步发送野火富文本通知，通知服务异常不影响日报保存。
+- 加载、空数据、失败重试、无权限及不存在等完整页面状态。
+
+## 创建野火应用
+
+在野火开放平台创建应用，填写应用地址，包括移动端地址、桌面端地址、回调/服务端地址。创建完成后得到 `appid` 和 `appsecret`。如果未配置回调/服务端地址，需要认证的工作台应用将不能正常登录。
+
+## 配置
+
+后端配置位于 `server/config/application.properties`：
+
+```properties
+# IM 服务地址，注意端口是 80，不是管理 API 的 18080。
+im.url=http://wildfirechat.net
+application.id=xxxxxxxx
+application.secret=123456
+
+# 服务对外访问地址，用于生成通知中的日报详情链接，末尾不要带 /。
+report.base-url=https://report.example.com
+# 默认开启；仅本地联调时关闭，避免向真实用户发送测试消息。
+report.notification-enabled=true
+# 有界通知线程池；队列满时由提交线程执行，避免任务无限积压。
+report.notification.core-pool-size=4
+report.notification.max-pool-size=8
+report.notification.queue-capacity=1000
 ```
-npm install
+
+默认端口为 `8881`，默认使用文件型 H2 数据库。生产环境请切换到 MySQL，并妥善配置数据库账号和应用密钥。
+
+## 构建
+
+前端：
+
+```bash
+cd web
+npm ci
+npm run lint
 npm run build
 ```
-编译成功后会自动放入到后端的static目录，不用手动拷贝。
 
-## Demo后端的编译
-进入到server目录，执行如下命令：
-```
+构建产物会自动复制到 `server/src/main/resources/static`。前端使用 Vue 3、Vue CLI 5 和 Webpack 5，支持当前 LTS 版本的 Node.js。
+
+后端：
+
+```bash
+cd server
 mvn clean package
 ```
 
-## 配置
-编译后的软件包在target目录下的```daily-report-0.1.jar```，包中已经包含了前后端的代码。运行时需要把server目录中的config目录拷贝到此jar的同级目录。
-```
-# IM服务地址，注意端口是80，不是管理API的18080.
-im.url=http://wildfirechat.net
-# 应用ID
-application.id=xxxxxxxx
-# 应用密钥
-application.secret=123456
-```
-此外还有其它配置，比如端口和数据库可以配置。默认使用的是h2数据库，上线前请切换到MySQL或则其它关系型数据库。
+生成的软件包为 `server/target/daily-report-0.1.0.jar`，包含前后端代码。
 
-## 运行
-执行命令
+## 运行与升级
+
+运行时把 `server/config` 目录复制到 jar 同级目录，然后执行：
+
+```bash
+java -jar daily-report-0.1.0.jar
 ```
-nohup java -jar daily-report-0.1.jar 2>&1 &
+
+也可以开发环境直接运行：
+
+```bash
+cd server
+mvn spring-boot:run
 ```
+
+本次升级为 `t_report` 增加了 `display_name`、`created_at`、`updated_at` 三列及作者查询索引，并新增 `t_report_recipient` 接收人关系表、`t_schema_migration` 迁移记录表。开发配置的 `spring.jpa.hibernate.ddl-auto=update` 会自动建表、补列和索引，已有日报仍可读取，旧记录的作者名回退为用户 ID。
+
+生产升级前请备份数据库；如关闭自动 DDL，请先按实体定义手动创建上述可空列、关系表和索引。首次启动会按每批 500 篇把旧日报的 `report_to`、`cc_to` 数据迁移到接收人关系表，完成后写入 `report-recipient-v1` 标记，后续启动不会重复迁移。多实例部署首次升级时应先只启动一个实例，迁移完成后再启动其他实例。
+
+## 性能设计
+
+- 汇报箱和收到日报统计使用接收人关系表精确查询，不再扫描全部日报并模糊匹配逗号分隔字符串。
+- 作者列表使用 `(user_id, day, updated_at)` 索引；接收人列表使用 `(recipient_id, report_day, report_user_id)` 索引。
+- 新前端使用游标分页，加载更多不随页码增加而扫描越来越深；旧 offset 接口保留用于兼容。
+- 关键词包含搜索仍可能需要扫描候选数据，数据量大时建议接入专用全文检索，并优先使用日期范围缩小结果。
+- 通知在数据库事务提交后通过有界线程池发送，避免无限创建线程或积压任务。
+
+## 主要接口
+
+所有业务接口（登录和应用配置除外）都需要野火会话认证。
+
+- `PUT /api/user/report`：新建或更新当前用户的日报。
+- `GET /api/user/report/{userId}/{day}`：按权限读取日报。
+- `DELETE /api/user/report/{day}`：删除当前用户指定日期的日报。
+- `GET /api/user/report_feed`：我的日报游标分页，下一页传 `cursorDay`。
+- `GET /api/user/received_feed`：汇报箱游标分页，下一页传 `cursorDay` 和 `cursorUserId`。
+- `GET /api/user/report_list`：我的日报旧 offset 接口；传 `paged=true` 时返回 `items/total/hasMore`，否则保留原数组响应。
+- `GET /api/user/received_list`：汇报箱旧 offset 分页接口。
+- `GET /api/user/report_stats`：当前用户统计。
+
+所有列表接口支持 `count`、`keyword`、`startDay`、`endDay`；旧接口另支持 `offset`，游标接口另支持上述游标参数。日期使用毫秒时间戳，`count` 最大为 100。游标接口返回 `items/hasMore/nextCursorDay/nextCursorUserId`，其中 `total` 固定为 `-1`，表示未执行额外的全量计数。
 
 ## 验证
-手机打开工作页面，点击创建的应用，进入应用测试。
+
+```bash
+cd server
+mvn test
+
+cd ../web
+npm run lint
+npm run build
+```
+
+在手机或桌面野火客户端的工作台打开应用，验证登录、写日报、联系人选择、列表/详情、编辑删除、汇报箱和通知跳转。
