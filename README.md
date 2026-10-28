@@ -40,11 +40,22 @@ cors.allowed-origins=
 # 允许嵌入本应用的父页面来源（CSP frame-ancestors），默认仅同源。
 # 如通过野火 Web 工作台 iframe 打开，请加入工作台的 origin。
 security.frame-ancestors='self'
+# 桌面端（Electron）工作台通过本机 WebSocket 与网页桥接，需要加入 CSP connect-src，
+# 否则页面会被浏览器拦截、表现为一直“未登录/登录超时”。仅支持 ws:// / wss:// 前缀。
+security.connect-src-extra=ws://127.0.0.1:7983 ws://localhost:7983
 ```
 
 会话默认 30 分钟空闲超时，Cookie 为会话级；修改口令、退出登录会撤销服务端会话。
 
 默认端口为 `8881`，默认使用文件型 H2 数据库。生产环境请切换到 MySQL，并妥善配置数据库账号和应用密钥。
+
+### 桌面端（PC 客户端）说明
+
+桌面端网页运行在 Electron 的 webview 中，登录依赖客户端注入的 `window.__wf_bridge_`（经本机 WebSocket `ws://127.0.0.1:7983` 与客户端主进程通信），因此：
+
+- 必须配置 `security.connect-src-extra`，否则 CSP `connect-src` 会拦掉桥接 WebSocket；手机上通过原生 dsbridge 调用，不受影响。
+- 客户端需使用正式打包版本（preload 不带 `eval`）；用 `eval` 方式打包的 preload 会被 CSP `script-src` 拦截，页面会提示“无法连接野火客户端”。
+- 取 authCode 必须等客户端 `config` 成功（`ready` 事件）后再调用，本项目的 `BaseLayout` 已按此顺序处理。
 
 ## 构建
 

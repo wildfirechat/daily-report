@@ -22,13 +22,33 @@ import java.io.IOException;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class SecurityHeadersFilter extends OncePerRequestFilter {
     private static final long MAX_API_BODY_BYTES = 64 * 1024;
-    private static final String BASE_CSP =
+    private static final String BASE_CSP_HEAD =
         "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
-            + "img-src 'self' data:; font-src 'self' data:; connect-src 'self'; "
-            + "object-src 'none'; base-uri 'self'; form-action 'self'";
+            + "img-src 'self' data:; font-src 'self' data:";
+    private static final String BASE_CSP_TAIL =
+        "object-src 'none'; base-uri 'self'; form-action 'self'";
 
     @Value("${security.frame-ancestors:}")
     private String frameAncestors;
+
+    /**
+     * 桌面端（Electron）工作台通过本机 WebSocket（默认 ws://127.0.0.1:7983）与网页桥接，
+     * 该连接受 CSP connect-src 约束，需要显式放行。只接受 ws:// / wss:// 来源，避免配置注入。
+     */
+    @Value("${security.connect-src-extra:}")
+    private String connectSrcExtra;
+
+    private String buildConnectSrc() {
+        StringBuilder connectSrc = new StringBuilder("'self'");
+        if (StringUtils.hasText(connectSrcExtra)) {
+            for (String source : connectSrcExtra.trim().split("\\s+")) {
+                if (source.startsWith("ws://") || source.startsWith("wss://")) {
+                    connectSrc.append(' ').append(source);
+                }
+            }
+        }
+        return connectSrc.toString();
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -38,14 +58,16 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
         response.setHeader("X-Permitted-Cross-Domain-Policies", "none");
         response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
 
-        String csp = BASE_CSP;
+        StringBuilder csp = new StringBuilder(BASE_CSP_HEAD)
+            .append("; connect-src ").append(buildConnectSrc())
+            .append("; ").append(BASE_CSP_TAIL);
         if (StringUtils.hasText(frameAncestors)) {
-            csp += "; frame-ancestors " + frameAncestors;
+            csp.append("; frame-ancestors ").append(frameAncestors);
             if ("'self'".equals(frameAncestors.trim())) {
                 response.setHeader("X-Frame-Options", "SAMEORIGIN");
             }
         }
-        response.setHeader("Content-Security-Policy", csp);
+        response.setHeader("Content-Security-Policy", csp.toString());
 
         if (request.isSecure() || "https".equalsIgnoreCase(request.getHeader("X-Forwarded-Proto"))) {
             response.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");

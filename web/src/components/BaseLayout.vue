@@ -13,6 +13,7 @@ import ErrorView from "@/components/ErrorView";
 import ToastHost from "@/components/ToastHost";
 import api from "@/api/api";
 import wf from "@/jssdk/wf";
+import {isBridgeAvailable} from "@/jssdk/util";
 
 const LOGIN_TIMEOUT_MS = 15000
 
@@ -27,14 +28,21 @@ export default {
             bridgeReady: false,
             loginErrorType: 'unknown',
             loginTimer: null,
-            loginAttempt: 0
+            loginAttempt: 0,
+            pendingAuth: null
         }
     },
     created() {
+        // 桌面端桥接由客户端注入，注入失败时直接给出明确错误，避免抛异常卡在启动页。
+        if (!isBridgeAvailable()) {
+            this.failLogin('bridge')
+            return
+        }
         wf.ready(() => {
             this.bridgeReady = true
             this.configStatus = 1
             this.finishLogin()
+            this.runPendingAuth()
         })
         wf.error(() => {
             this.bridgeReady = false
@@ -49,6 +57,7 @@ export default {
         beginLogin() {
             this.clearLoginTimeout()
             const attempt = ++this.loginAttempt
+            this.pendingAuth = null
             this.account = ''
             this.loginStatus = 0
             this.configStatus = this.bridgeReady ? 1 : 0
@@ -71,12 +80,18 @@ export default {
             }
         },
         async configureBridge(attempt) {
+            let configData
             try {
-                const configData = await api.getConfigData()
-                if (attempt !== this.loginAttempt) return
-                wf.config(configData)
+                configData = await api.getConfigData()
             } catch (e) {
                 this.failLogin('network', attempt)
+                return
+            }
+            if (attempt !== this.loginAttempt) return
+            try {
+                wf.config(configData)
+            } catch (e) {
+                this.failLogin('bridge', attempt)
             }
         },
         async login(attempt) {
@@ -85,28 +100,53 @@ export default {
             try {
                 configData = await api.getConfigData()
                 if (attempt !== this.loginAttempt) return
-                wf.config(configData)
             } catch (e) {
                 this.failLogin('network', attempt)
                 return
             }
-            wf.biz.getAuthCode(configData.appId, configData.appType, (authCode) => {
+
+            // 客户端 config 是异步操作，getAuthCode 必须在 ready 之后调用；
+            // 这里先挂起取码逻辑，等 ready 事件（或已配置成功）后再执行。
+            this.pendingAuth = () => {
                 if (attempt !== this.loginAttempt) return
-                api.login({
-                    appId: configData.appId,
-                    appType: configData.appType,
-                    authCode: authCode
-                }).then((account) => {
-                    if (attempt !== this.loginAttempt) return
-                    this.account = account
-                    this.loginStatus = 1
-                    this.finishLogin()
-                }).catch(() => {
-                    this.failLogin('auth', attempt)
-                })
-            }, () => {
+                try {
+                    wf.biz.getAuthCode(configData.appId, configData.appType, (authCode) => {
+                        if (attempt !== this.loginAttempt) return
+                        api.login({
+                            appId: configData.appId,
+                            appType: configData.appType,
+                            authCode: authCode
+                        }).then((account) => {
+                            if (attempt !== this.loginAttempt) return
+                            this.account = account
+                            this.loginStatus = 1
+                            this.finishLogin()
+                        }).catch(() => {
+                            this.failLogin('auth', attempt)
+                        })
+                    }, () => {
+                        this.failLogin('bridge', attempt)
+                    })
+                } catch (e) {
+                    this.failLogin('bridge', attempt)
+                }
+            }
+
+            if (this.bridgeReady) {
+                this.runPendingAuth()
+                return
+            }
+            try {
+                wf.config(configData)
+            } catch (e) {
+                this.pendingAuth = null
                 this.failLogin('bridge', attempt)
-            })
+            }
+        },
+        runPendingAuth() {
+            const pending = this.pendingAuth
+            this.pendingAuth = null
+            if (pending) pending()
         },
         startLoginTimeout(attempt) {
             this.loginTimer = window.setTimeout(() => {

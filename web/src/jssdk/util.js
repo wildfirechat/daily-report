@@ -21,12 +21,28 @@ export function _handleNativeCall(successCB, failCB) {
     }
 }
 
+function isElectronShell() {
+    return (typeof process !== 'undefined' && process.versions && process.versions.electron)
+        || navigator.userAgent.toLowerCase().indexOf('electron') >= 0;
+}
+
+/**
+ * 桌面端（Electron）的桥接由客户端 preload 注入，注入失败（例如被 CSP 拦截）时
+ * window.__wf_bridge_ 不存在。调用方应先检查，避免直接抛 TypeError 导致白屏。
+ */
+export function isBridgeAvailable() {
+    if (isElectronShell()) {
+        return !!(window.__wf_bridge_ && typeof window.__wf_bridge_.call === 'function');
+    }
+    return true;
+}
+
 export function bridge() {
   // for pc
     // preload
     console.log('init bridge-');
     console.log('userAgent', navigator.userAgent);
-    if((typeof process !== 'undefined' && process.versions && process.versions.electron) || navigator.userAgent.toLowerCase().indexOf('electron') >= 0){
+    if(isElectronShell()){
         console.log('js bridge, electron')
         // electron pc 端，注入了 window.__wf_bridge_
         return window.__wf_bridge_;
