@@ -7,13 +7,39 @@
     <meta name="wf-allowed-parent-origins" content="">
     <link rel="icon" href="<%= BASE_URL %>favicon.ico">
     <title><%= htmlWebpackPlugin.options.title %></title>
+    <style>
+      .boot-fallback, .boot-error {
+        box-sizing: border-box;
+        margin: 18vh auto 0;
+        max-width: 420px;
+        padding: 0 20px;
+        font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+        color: #667085;
+        text-align: center;
+        line-height: 1.7;
+      }
+      .boot-fallback { font-size: 15px; }
+      .boot-error h2 { margin: 0 0 10px; color: #1d2939; font-size: 18px; }
+      .boot-error p { margin: 0 0 18px; font-size: 13px; word-break: break-all; }
+      .boot-error button {
+        padding: 9px 22px;
+        border: 0;
+        border-radius: 6px;
+        background: #2f6fed;
+        color: #fff;
+        font-size: 14px;
+        cursor: pointer;
+      }
+    </style>
   </head>
   <script type="text/javascript" src="<%= BASE_URL %>js/uni.webview.1.5.5.js"></script>
   <body>
     <noscript>
       <strong>We're sorry but <%= htmlWebpackPlugin.options.title %> doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
     </noscript>
-    <div id="app"></div>
+    <div id="app"><div class="boot-fallback">正在加载日报…</div></div>
+    <!-- 页面脚本加载/启动失败时把错误显示出来，避免白屏 -->
+    <script type="text/javascript" src="<%= BASE_URL %>js/boot-check.js"></script>
     <!-- built files will be auto injected -->
   </body>
 </html>

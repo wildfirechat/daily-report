@@ -57,6 +57,8 @@ security.connect-src-extra=ws://127.0.0.1:7983 ws://localhost:7983
 - 客户端需使用正式打包版本（preload 不带 `eval`）；用 `eval` 方式打包的 preload 会被 CSP `script-src` 拦截，页面会提示“无法连接野火客户端”。
 - 取 authCode 必须等客户端 `config` 成功（`ready` 事件）后再调用，本项目的 `BaseLayout` 已按此顺序处理。
 
+`index.html` 等页面外壳已设置 `Cache-Control: no-cache`，并内置 `js/boot-check.js`：脚本加载失败时会显示具体失败地址，而不是白屏。升级部署后如果客户端仍白屏，通常是客户端缓存了旧 `index.html`（引用了已被删除的旧 hash 资源），强制刷新或清理客户端缓存一次即可；控制台的 `[daily-report] build <时间>` 可确认实际加载的版本。
+
 ## 构建
 
 前端：

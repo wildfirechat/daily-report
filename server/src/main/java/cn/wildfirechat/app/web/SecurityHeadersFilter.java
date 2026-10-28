@@ -79,6 +79,15 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
             response.setHeader("Pragma", "no-cache");
         }
 
+        // 页面外壳和启动自检脚本不能缓存：部署更新后仍使用旧 index.html 会引用已被删除的
+        // 旧 hash 资源，客户端表现为白屏。带 hash 的 js/css 资源不受影响。
+        if (path != null && (path.endsWith(".html") || path.endsWith("/")
+            || path.endsWith("/js/boot-check.js"))) {
+            response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+            response.setHeader("Pragma", "no-cache");
+            response.setHeader("Expires", "0");
+        }
+
         if (path != null && path.startsWith(request.getContextPath() + "/api/")
             && request.getContentLengthLong() > MAX_API_BODY_BYTES) {
             response.setStatus(HttpServletResponse.SC_REQUEST_ENTITY_TOO_LARGE);

@@ -1,5 +1,5 @@
-import {createApp} from 'vue'
 import './assets/main.css'
 import App from './pages/InboxPage'
+import {mountApp} from './boot'
 
-createApp(App).mount('#app')
+mountApp(App)
