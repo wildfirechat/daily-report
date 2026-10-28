@@ -66,21 +66,22 @@ public class ShiroConfig {
         DefaultWebSecurityManager defaultSecurityManager = new DefaultWebSecurityManager();
         defaultSecurityManager.setRealms(Arrays.asList(passwordRealm, authCodeRealm));
         ShiroSessionManager sessionManager = new ShiroSessionManager();
-        sessionManager.setGlobalSessionTimeout(Long.MAX_VALUE);
+        // 30 分钟空闲超时；会话不再永久有效。
+        sessionManager.setGlobalSessionTimeout(30 * 60 * 1000L);
         sessionManager.setSessionDAO(dbSessionDao);
 
         Cookie cookie = new SimpleCookie(ShiroHttpSession.DEFAULT_SESSION_ID_NAME);
-        if (All_Client_Support_SSL) {
-            cookie.setSameSite(Cookie.SameSiteOptions.NONE);
-            cookie.setSecure(true);
-        } else {
-            cookie.setSameSite(null);
-        }
-        cookie.setMaxAge(Integer.MAX_VALUE);
+        cookie.setHttpOnly(true);
+        cookie.setSecure(All_Client_Support_SSL);
+        cookie.setSameSite(All_Client_Support_SSL ? Cookie.SameSiteOptions.NONE : Cookie.SameSiteOptions.LAX);
+        // 会话级 Cookie，关闭浏览器即失效；服务端仍有 30 分钟空闲超时。
+        cookie.setMaxAge(-1);
         sessionManager.setSessionIdCookie(cookie);
         sessionManager.setSessionIdCookieEnabled(true);
-        sessionManager.setSessionIdUrlRewritingEnabled(true);
+        sessionManager.setSessionIdUrlRewritingEnabled(false);
 
+        // 本项目不使用 rememberMe，显式关闭，避免“记住我”绕过完整认证。
+        defaultSecurityManager.setRememberMeManager(null);
         defaultSecurityManager.setSessionManager(sessionManager);
         SecurityUtils.setSecurityManager(defaultSecurityManager);
         return defaultSecurityManager;

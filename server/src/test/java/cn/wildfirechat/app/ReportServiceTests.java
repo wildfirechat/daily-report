@@ -118,7 +118,7 @@ public class ReportServiceTests {
 
         Report forbidden = storedReport("bob", "manager", "alice2");
         when(reportRepository.findById(any(UserDayId.class))).thenReturn(Optional.of(forbidden));
-        assertEquals(RestResult.RestCode.ERROR_NO_RIGHT.code, service.getReport("bob", forbidden.day).getCode());
+        assertEquals(RestResult.RestCode.ERROR_NOT_EXIST.code, service.getReport("bob", forbidden.day).getCode());
     }
 
     @Test

@@ -8,6 +8,7 @@ public interface Service {
     RestResult login(HttpServletResponse response, String account, String password);
     RestResult clientLogin(HttpServletResponse response, String appId, int appType, String authcode);
     RestResult updatePassword(String oldPassword, String newPassword);
+    RestResult logout();
     RestResult getAccount();
     RestResult favApplication(String targetId);
     RestResult createReport(PojoReport report);

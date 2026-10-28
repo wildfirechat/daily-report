@@ -22,7 +22,10 @@ public class RestResult {
         ERROR_SESSION_CANCELED(18, "会话已经取消"),
         ERROR_CODE_ACCOUNT_NOT_EXIST(19, "账户不存在"),
         ERROR_CODE_APPLICATION_ALREADY_EXIST(20, "应用已经存在"),
-        ERROR_CODE_PASSWORD_INCORRECT(21, "密码错误");
+        ERROR_CODE_PASSWORD_INCORRECT(21, "密码错误"),
+        ERROR_REQUEST_TOO_FREQUENT(22, "请求过于频繁，请稍后再试"),
+        ERROR_CSRF_TOKEN(23, "CSRF 校验失败，请刷新页面后重试"),
+        ERROR_REQUEST_TOO_LARGE(24, "请求内容过大");
         public int code;
         public String msg;
 

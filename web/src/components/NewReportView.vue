@@ -141,7 +141,7 @@ export default {
             this.submitting = true
             try {
                 const saved = await api.report(this.report)
-                localStorage.removeItem(this.draftKey)
+                sessionStorage.removeItem(this.draftKey)
                 openPage(`report.html?userId=${encodeURIComponent(saved.userId)}&day=${saved.day}`)
             } catch (e) {
                 this.errorMessage = e.message || '日报提交失败，请稍后重试'
@@ -151,25 +151,25 @@ export default {
         saveDraft() {
             if (this.isEditing) return
             try {
-                localStorage.setItem(this.draftKey, JSON.stringify({report: this.report, reportDate: this.reportDate}))
+                sessionStorage.setItem(this.draftKey, JSON.stringify({report: this.report, reportDate: this.reportDate}))
             } catch (e) {
                 console.warn('Save draft failed', e)
             }
         },
         restoreDraft() {
             try {
-                const draft = JSON.parse(localStorage.getItem(this.draftKey))
+                const draft = JSON.parse(sessionStorage.getItem(this.draftKey))
                 if (draft && draft.report) {
                     Object.assign(this.report, draft.report)
                     this.reportDate = draft.reportDate || toDateInput(this.report.day)
                     this.draftRestored = true
                 }
             } catch (e) {
-                localStorage.removeItem(this.draftKey)
+                sessionStorage.removeItem(this.draftKey)
             }
         },
         discardDraft() {
-            localStorage.removeItem(this.draftKey)
+            sessionStorage.removeItem(this.draftKey)
             this.report = new Report(this.account)
             this.reportDate = toDateInput(Date.now())
             this.userTargets = []

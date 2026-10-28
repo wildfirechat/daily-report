@@ -10,6 +10,7 @@ import org.apache.shiro.subject.Subject;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 
@@ -26,13 +27,8 @@ public class JsonAuthLoginFilter extends AccessControlFilter {
 
         Subject subject = SecurityUtils.getSubject();
 
-        if(null != subject){
-            if(subject.isRemembered()){
-                return Boolean.TRUE;
-            }
-            if(subject.isAuthenticated()){
-                return Boolean.TRUE;
-            }
+        if (subject != null && subject.isAuthenticated()) {
+            return Boolean.TRUE;
         }
 
         return Boolean.FALSE ;
@@ -42,6 +38,9 @@ public class JsonAuthLoginFilter extends AccessControlFilter {
     protected boolean onAccessDenied(ServletRequest request, ServletResponse response) throws Exception {
         PrintWriter out = null;
         try {
+            HttpServletResponse httpResponse = (HttpServletResponse) response;
+            httpResponse.setStatus(401);
+            httpResponse.setHeader("Cache-Control", "no-store");
             response.setCharacterEncoding("UTF-8");
             response.setContentType("application/json; charset=utf-8");
             out = response.getWriter();

@@ -1,4 +1,5 @@
 module.exports = {
+    productionSourceMap: false,
     pages: {
         index: './src/main.js',
         reportList: './src/main.js',

@@ -12,14 +12,46 @@ let initialized = false;
 
 const windowId = 'web-tab';
 
+const configuredParentOrigins = (window.__WF_ALLOWED_PARENT_ORIGINS__
+    || (document.querySelector('meta[name="wf-allowed-parent-origins"]') || {}).content
+    || '')
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean);
+
+function getParentOrigin() {
+    try {
+        if (window.location.ancestorOrigins && window.location.ancestorOrigins.length) {
+            return window.location.ancestorOrigins[0];
+        }
+        if (document.referrer) {
+            return new URL(document.referrer).origin;
+        }
+    } catch (e) {
+        // Native/WebView environments may not expose an origin.
+    }
+    return null;
+}
+
+const parentOrigin = getParentOrigin();
+
+function isAllowedParentOrigin(origin) {
+    if (configuredParentOrigins.length) {
+        return configuredParentOrigins.includes(origin);
+    }
+    // If the embedding origin is known, only accept messages from that exact origin.
+    // For native WebViews without an origin, event.source === window.parent is the only check.
+    return !parentOrigin || origin === parentOrigin;
+}
+
 export function initWeb() {
     if (initialized) {
         return;
     }
 
     window.addEventListener('message', (event) => {
-        // 只接受来自父窗口的消息
-        if (event.source !== window.parent) {
+        // 只接受来自父窗口、且来源 origin 受信任的消息
+        if (event.source !== window.parent || !isAllowedParentOrigin(event.origin)) {
             return;
         }
 
@@ -29,7 +61,8 @@ export function initWeb() {
         }
 
         // 过滤：检查 windowId 和 appUrl
-        if (!obj.windowId.startsWith(windowId) || obj.appUrl !== location.href) {
+        if (typeof obj.windowId !== 'string' || !obj.windowId.startsWith(windowId)
+            || obj.appUrl !== location.href) {
             console.log('ignore wf-op data', obj);
             return;
         }
@@ -65,7 +98,7 @@ async function call(handlerName, args, callback) {
     let obj = { type: 'wf-op-request', requestId: reqId, windowId, appUrl, handlerName, args };
     console.log('wf-op-request', obj);
 
-    window.parent.postMessage(obj, '*');
+    window.parent.postMessage(obj, parentOrigin && parentOrigin !== 'null' ? parentOrigin : '*');
 }
 
 function handleOpResponse(requestId, args) {

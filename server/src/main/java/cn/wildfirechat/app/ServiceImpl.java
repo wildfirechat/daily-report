@@ -13,6 +13,8 @@ import cn.wildfirechat.app.pojo.PojoReport;
 import cn.wildfirechat.app.pojo.PojoReportPage;
 import cn.wildfirechat.app.pojo.PojoReportStats;
 import cn.wildfirechat.app.shiro.AuthCodeToken;
+import cn.wildfirechat.app.shiro.DBSessionDao;
+import cn.wildfirechat.app.shiro.PasswordHasher;
 import cn.wildfirechat.common.ErrorCode;
 import cn.wildfirechat.messagecontentbuilder.RichNotificationContentBuilder;
 import cn.wildfirechat.pojos.MessagePayload;
@@ -22,8 +24,9 @@ import cn.wildfirechat.sdk.ChannelServiceApi;
 import cn.wildfirechat.sdk.RobotService;
 import cn.wildfirechat.sdk.model.IMResult;
 import com.google.common.base.Joiner;
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.shiro.SecurityUtils;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authc.ExcessiveAttemptsException;
@@ -38,6 +41,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
@@ -50,6 +54,7 @@ import org.springframework.util.StringUtils;
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletResponse;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Field;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -73,8 +78,12 @@ import static cn.wildfirechat.app.RestResult.RestCode.ERROR_NO_RIGHT;
 public class ServiceImpl implements Service {
     private static final Logger LOG = LoggerFactory.getLogger(ServiceImpl.class);
     private static final int MAX_PAGE_SIZE = 100;
+    private static final int MAX_OFFSET = 10000;
     private static final int MAX_RECIPIENTS = 20;
     private static final int MAX_TEXT_LENGTH = 2048;
+    private static final int MAX_USER_ID_LENGTH = 64;
+    private static final int MIN_PASSWORD_LENGTH = 8;
+    private static final int MAX_PASSWORD_BYTES = 72;
 
     @Value("${im.url}")
     private String mImUrl;
@@ -101,6 +110,9 @@ public class ServiceImpl implements Service {
     private ReportRecipientRepository reportRecipientRepository;
 
     @Autowired
+    private DBSessionDao dbSessionDao;
+
+    @Autowired
     @Qualifier("reportNotificationExecutor")
     private ThreadPoolTaskExecutor taskExecutor;
 
@@ -111,6 +123,37 @@ public class ServiceImpl implements Service {
     private void init() {
         mChannelServiceApi = new ChannelServiceApi(mImUrl, mApplicationId, mApplicationSecret);
         mRobotService = new RobotService(mImUrl, mApplicationId, mApplicationSecret);
+        configureSdkHttpTimeouts();
+    }
+
+    /**
+     * The bundled SDK creates an Apache HttpClient without connect/socket timeouts. Replace it
+     * with a bounded client so an unavailable IM server cannot pin request threads indefinitely.
+     */
+    private void configureSdkHttpTimeouts() {
+        RequestConfig requestConfig = RequestConfig.custom()
+            .setConnectTimeout(3000)
+            .setConnectionRequestTimeout(2000)
+            .setSocketTimeout(5000)
+            .build();
+        CloseableHttpClient httpClient = HttpClients.custom()
+            .setDefaultRequestConfig(requestConfig)
+            .build();
+        replaceSdkHttpClient(mChannelServiceApi, "channelHttpUtils", httpClient);
+        replaceSdkHttpClient(mRobotService, "robotHttpUtils", httpClient);
+    }
+
+    private void replaceSdkHttpClient(Object service, String utilsFieldName, CloseableHttpClient httpClient) {
+        try {
+            Field utilsField = service.getClass().getDeclaredField(utilsFieldName);
+            utilsField.setAccessible(true);
+            Object httpUtils = utilsField.get(service);
+            Field clientField = httpUtils.getClass().getDeclaredField("httpClient");
+            clientField.setAccessible(true);
+            clientField.set(httpUtils, httpClient);
+        } catch (Exception e) {
+            LOG.warn("Unable to configure SDK HTTP timeouts", e);
+        }
     }
 
     @Bean
@@ -138,6 +181,8 @@ public class ServiceImpl implements Service {
             return RestResult.error(ERROR_CODE_PASSWORD_INCORRECT);
         }
 
+        establishSession(subject);
+        token.clear();
         Object sessionId = subject.getSession().getId();
         httpResponse.setHeader("authToken", sessionId.toString());
         return RestResult.ok(null);
@@ -162,16 +207,28 @@ public class ServiceImpl implements Service {
             return RestResult.error(ERROR_CODE_PASSWORD_INCORRECT);
         }
 
+        establishSession(subject);
         Object sessionId = subject.getSession().getId();
         httpResponse.setHeader("authToken", sessionId.toString());
         return RestResult.ok(subject.getPrincipal());
     }
 
+    private void establishSession(Subject subject) {
+        subject.getSession().setAttribute("userId", subject.getPrincipal());
+        dbSessionDao.rotate(subject.getSession());
+    }
+
     @Override
+    @Transactional
     public RestResult updatePassword(String oldPassword, String newPassword) {
         Subject subject = SecurityUtils.getSubject();
         if (!subject.isAuthenticated()) {
             return RestResult.error(ERROR_NOT_LOGIN);
+        }
+        if (!StringUtils.hasText(oldPassword) || !StringUtils.hasText(newPassword)
+            || newPassword.length() < MIN_PASSWORD_LENGTH
+            || newPassword.getBytes(StandardCharsets.UTF_8).length > MAX_PASSWORD_BYTES) {
+            return RestResult.error(ERROR_INVALID_PARAMETER);
         }
         String account = (String) subject.getPrincipal();
         Optional<User> optionalUser = userRepository.findByAccount(account);
@@ -180,14 +237,25 @@ public class ServiceImpl implements Service {
         }
 
         User user = optionalUser.get();
-        String md5 = new Base64().encodeToString(DigestUtils.getDigest("MD5").digest((oldPassword + user.getSalt()).getBytes(StandardCharsets.UTF_8)));
-        if (!md5.equals(user.getPasswordMd5())) {
+        if (!PasswordHasher.matches(oldPassword, user.getPasswordMd5(), user.getSalt())) {
             return RestResult.error(ERROR_CODE_PASSWORD_INCORRECT);
         }
 
-        String newMd5 = new Base64().encodeToString(DigestUtils.getDigest("MD5").digest((newPassword + user.getSalt()).getBytes(StandardCharsets.UTF_8)));
-        user.setPasswordMd5(newMd5);
+        user.setPasswordMd5(PasswordHasher.encode(newPassword));
         userRepository.save(user);
+
+        // Password changes revoke every existing session, including the current one.
+        dbSessionDao.deleteByUserId(account);
+        subject.logout();
+        return RestResult.ok(null);
+    }
+
+    @Override
+    public RestResult logout() {
+        Subject subject = SecurityUtils.getSubject();
+        if (subject != null && subject.isAuthenticated()) {
+            subject.logout();
+        }
         return RestResult.ok(null);
     }
 
@@ -213,7 +281,7 @@ public class ServiceImpl implements Service {
         if (subject.isAuthenticated()) {
             return RestResult.ok(subject.getPrincipal());
         }
-        return RestResult.error(ERROR_NOT_EXIST);
+        return RestResult.error(ERROR_NOT_LOGIN);
     }
 
     @Override
@@ -279,15 +347,20 @@ public class ServiceImpl implements Service {
         if (!StringUtils.hasText(currentUserId)) {
             return RestResult.error(ERROR_NOT_LOGIN);
         }
+        if (StringUtils.hasText(userId) && userId.length() > MAX_USER_ID_LENGTH) {
+            return RestResult.error(ERROR_INVALID_PARAMETER);
+        }
         long reportDay = day <= 0 ? getToday() : normalizeDay(day);
         String reportUserId = StringUtils.hasText(userId) ? userId : currentUserId;
         Optional<Report> reportOptional = reportRepository.findById(new UserDayId(reportUserId, reportDay));
         if (!reportOptional.isPresent()) {
+            // Return the same error for "not found" and "no permission" to avoid a report
+            // existence oracle.
             return RestResult.error(ERROR_NOT_EXIST);
         }
         Report report = reportOptional.get();
         if (!canRead(report, currentUserId)) {
-            return RestResult.error(ERROR_NO_RIGHT);
+            return RestResult.error(ERROR_NOT_EXIST);
         }
         return RestResult.ok(convertReport(report));
     }
@@ -353,7 +426,8 @@ public class ServiceImpl implements Service {
             return RestResult.error(ERROR_NOT_LOGIN);
         }
         RestResult validationError = validateQuery(count, 0, keyword, startDay, endDay);
-        if (validationError != null || (cursorDay != null && !StringUtils.hasText(cursorUserId))) {
+        if (validationError != null || (cursorDay != null && !StringUtils.hasText(cursorUserId))
+            || (cursorUserId != null && cursorUserId.length() > MAX_USER_ID_LENGTH)) {
             return RestResult.error(ERROR_INVALID_PARAMETER);
         }
         Slice<Report> reports = reportRecipientRepository.getReceivedFeed(userId, searchPattern(keyword), startDay,
@@ -426,7 +500,8 @@ public class ServiceImpl implements Service {
     }
 
     private RestResult validateQuery(int count, int offset, String keyword, Long startDay, Long endDay) {
-        if (count < 1 || count > MAX_PAGE_SIZE || offset < 0 || (keyword != null && keyword.length() > 100)) {
+        if (count < 1 || count > MAX_PAGE_SIZE || offset < 0 || offset > MAX_OFFSET
+            || (keyword != null && keyword.length() > 100)) {
             return RestResult.error(ERROR_INVALID_PARAMETER);
         }
         if (startDay != null && endDay != null && normalizeDay(startDay) > normalizeDay(endDay)) {
@@ -592,10 +667,15 @@ public class ServiceImpl implements Service {
         reportTo.add(report.userId);
         List<String> ccTo = splitRecipients(report.ccTo);
         MessagePayload payload = builder.build();
-        taskExecutor.submit(() -> {
-            sendTextMessage(new ArrayList<>(reportTo), payload);
-            sendTextMessage(ccTo, payload);
-        });
+        try {
+            taskExecutor.submit(() -> {
+                sendTextMessage(new ArrayList<>(reportTo), payload);
+                sendTextMessage(ccTo, payload);
+            });
+        } catch (TaskRejectedException e) {
+            LOG.warn("Report notification queue is full, notification dropped for report {}/{}",
+                report.userId, report.day);
+        }
     }
 
     private String summary(String content) {

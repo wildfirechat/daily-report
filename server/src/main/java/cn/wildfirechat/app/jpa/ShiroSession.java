@@ -11,13 +11,17 @@ public class ShiroSession {
 	@Column(length = 128)
 	private String sessionId;
 
+	@Column(length = 64)
+	private String userId;
+
 	@Lob
 	@Column(name="session_data", length = 2048)
 	@Type(type="org.hibernate.type.BinaryType")
 	private byte[] sessionData;
 
-	public ShiroSession(String sessionId, byte[] sessionData) {
+	public ShiroSession(String sessionId, String userId, byte[] sessionData) {
 		this.sessionId = sessionId;
+		this.userId = userId;
 		this.sessionData = sessionData;
 	}
 
@@ -30,6 +34,14 @@ public class ShiroSession {
 
 	public void setSessionId(String sessionId) {
 		this.sessionId = sessionId;
+	}
+
+	public String getUserId() {
+		return userId;
+	}
+
+	public void setUserId(String userId) {
+		this.userId = userId;
 	}
 
 	public byte[] getSessionData() {

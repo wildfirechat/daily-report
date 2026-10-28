@@ -76,7 +76,7 @@ export default {
                 this.report = await api.getReport(userId, day)
             } catch (e) {
                 this.report = null
-                this.errorMessage = e.code === 14 ? '你没有权限查看这篇日报' : (e.code === 16 ? '日报不存在或已删除' : (e.message || '日报加载失败'))
+                this.errorMessage = e.code === 16 ? '日报不存在或无权查看' : (e.message || '日报加载失败')
             } finally {
                 this.loading = false
             }

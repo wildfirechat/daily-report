@@ -30,11 +30,19 @@ application.secret=123456
 report.base-url=https://report.example.com
 # 默认开启；仅本地联调时关闭，避免向真实用户发送测试消息。
 report.notification-enabled=true
-# 有界通知线程池；队列满时由提交线程执行，避免任务无限积压。
+# 有界通知线程池；队列满时丢弃通知并记录日志，避免阻塞请求线程。
 report.notification.core-pool-size=4
 report.notification.max-pool-size=8
 report.notification.queue-capacity=1000
+
+# CORS 允许的来源，逗号分隔；为空时仅允许同源。
+cors.allowed-origins=
+# 允许嵌入本应用的父页面来源（CSP frame-ancestors），默认仅同源。
+# 如通过野火 Web 工作台 iframe 打开，请加入工作台的 origin。
+security.frame-ancestors='self'
 ```
+
+会话默认 30 分钟空闲超时，Cookie 为会话级；修改口令、退出登录会撤销服务端会话。
 
 默认端口为 `8881`，默认使用文件型 H2 数据库。生产环境请切换到 MySQL，并妥善配置数据库账号和应用密钥。
 
@@ -91,6 +99,7 @@ mvn spring-boot:run
 
 所有业务接口（登录和应用配置除外）都需要野火会话认证。
 
+- `POST /api/logout`：退出登录并撤销当前会话。
 - `PUT /api/user/report`：新建或更新当前用户的日报。
 - `GET /api/user/report/{userId}/{day}`：按权限读取日报。
 - `DELETE /api/user/report/{day}`：删除当前用户指定日期的日报。
