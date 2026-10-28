@@ -17,9 +17,12 @@ export function formatDate(timestamp) {
     if (!timestamp) {
         return ''
     }
-    return new Date(timestamp).toLocaleDateString('zh-CN', {
-        year: 'numeric', month: 'long', day: 'numeric', weekday: 'short'
+    const date = new Date(timestamp)
+    const datePart = date.toLocaleDateString('zh-CN', {
+        year: 'numeric', month: 'long', day: 'numeric'
     })
+    const weekday = date.toLocaleDateString('zh-CN', {weekday: 'short'})
+    return `${datePart} · ${weekday}`
 }
 
 export function formatDateTime(timestamp) {
@@ -27,6 +30,7 @@ export function formatDateTime(timestamp) {
         return ''
     }
     return new Date(timestamp).toLocaleString('zh-CN', {
-        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false
     })
 }

@@ -12,13 +12,17 @@ html, body {
 
 body {
     background: #f6f8fb;
-    color: #27344a;
+    color: #1f2937;
     font-family: 'PingFang SC', "Helvetica Neue", Helvetica, "microsoft yahei", arial, STHeiTi, sans-serif;
     -webkit-font-smoothing: antialiased;
 }
 
 button, input, textarea {
     font: inherit;
+}
+
+button {
+    -webkit-tap-highlight-color: transparent;
 }
 
 button:disabled {
@@ -41,10 +45,16 @@ ul, li {
 }
 
 .primary-button, .secondary-button {
-    padding: 9px 18px;
-    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 10px 18px;
+    border-radius: 9px;
     font-size: 14px;
+    line-height: 1.2;
     cursor: pointer;
+    transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease;
 }
 
 .primary-button {
@@ -53,56 +63,85 @@ ul, li {
     color: #fff;
 }
 
-.primary-button:active {
+.primary-button:hover {
+    border-color: #255dcc;
     background: #255dcc;
 }
 
-.secondary-button {
-    border: 1px solid #dce2eb;
-    background: #fff;
-    color: #657187;
+.primary-button:active {
+    background: #1f4fb8;
 }
 
-input {
-    min-height: 40px;
-    padding: 9px 11px;
-    border: 1px solid #dfe5ed;
-    border-radius: 8px;
+.primary-button:focus-visible,
+.secondary-button:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible {
+    outline: 3px solid rgba(47, 111, 237, .28);
+    outline-offset: 2px;
+}
+
+.secondary-button {
+    border: 1px solid #d0d5dd;
+    background: #fff;
+    color: #475467;
+}
+
+.secondary-button:hover {
+    border-color: #b8c2d0;
+    background: #f9fafb;
+    color: #344054;
+}
+
+.secondary-button:active {
+    background: #f2f4f7;
+}
+
+input, textarea {
+    border: 1px solid #d0d5dd;
+    border-radius: 9px;
     outline: none;
     background: #fff;
     color: #344054;
     font-size: 14px;
+    transition: border-color .16s ease, box-shadow .16s ease;
 }
 
-input:focus {
+input {
+    min-height: 44px;
+    padding: 10px 12px;
+}
+
+input:focus, textarea:focus {
     border-color: #8aaff5;
-    box-shadow: 0 0 0 3px rgba(47, 111, 237, .08);
+    box-shadow: 0 0 0 3px rgba(47, 111, 237, .12);
 }
 
 .state-view {
-    padding: 70px 20px;
-    color: #8b95a5;
+    padding: 64px 20px;
+    color: #667085;
     text-align: center;
 }
 
 .empty-view strong {
-    color: #5b6678;
+    color: #344054;
     font-size: 17px;
 }
 
 .empty-view p {
     margin: 10px 0 22px;
-    font-size: 13px;
+    color: #667085;
+    font-size: 14px;
 }
 
 .error-banner {
     margin: 12px 0;
     padding: 11px 13px;
-    border: 1px solid #f4d4d4;
+    border: 1px solid #fecdca;
     border-radius: 8px;
-    background: #fff3f3;
-    color: #bd4848;
+    background: #fef3f2;
+    color: #b42318;
     font-size: 13px;
+    line-height: 1.6;
     text-align: left;
 }
 
@@ -110,7 +149,8 @@ input:focus {
     margin-left: 8px;
     border: 0;
     background: transparent;
-    color: #bd4848;
+    color: #b42318;
+    font-size: inherit;
     text-decoration: underline;
     cursor: pointer;
 }
@@ -121,4 +161,13 @@ input:focus {
     content: "";
     visibility: hidden;
     height: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+    }
 }

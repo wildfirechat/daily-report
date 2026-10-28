@@ -1,4 +1,5 @@
 import {createApp} from 'vue'
-import App from './pages/ReportListPage'
+import './assets/main.css'
+import App from './pages/HomePage'
 
 createApp(App).mount('#app')

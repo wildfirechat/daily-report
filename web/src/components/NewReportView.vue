@@ -1,14 +1,14 @@
 <template>
     <main class="page editor-page">
         <header class="editor-header">
-            <button class="text-button" @click="cancel">返回</button>
+            <button class="text-button" type="button" @click="cancel">返回</button>
             <h1>{{ isEditing ? '编辑日报' : '写日报' }}</h1>
             <span class="header-spacer"></span>
         </header>
-        <section v-if="loading" class="state-view">正在加载日报...</section>
+        <section v-if="loading" class="state-view" aria-busy="true">正在加载日报...</section>
         <form v-else @submit.prevent="submitReport">
             <p v-if="draftRestored" class="draft-tip">已恢复上次未提交的草稿 <button type="button" @click="discardDraft">清除草稿</button></p>
-            <p v-if="errorMessage" class="error-banner">{{ errorMessage }}</p>
+            <p v-if="errorMessage" class="error-banner" role="alert">{{ errorMessage }}</p>
 
             <section class="form-card">
                 <label class="field-label" for="report-date">汇报日期</label>
@@ -51,6 +51,7 @@ import Report from "@/model/report";
 import api from "@/api/api";
 import {fromDateInput, toDateInput} from '@/utils/date'
 import {openPage} from '@/utils/navigation'
+import {queueToast} from '@/utils/toast'
 
 export default {
     name: 'NewReportView',
@@ -142,7 +143,8 @@ export default {
             try {
                 const saved = await api.report(this.report)
                 sessionStorage.removeItem(this.draftKey)
-                openPage(`report.html?userId=${encodeURIComponent(saved.userId)}&day=${saved.day}`)
+                queueToast(this.isEditing ? '日报已更新' : '日报已提交')
+                openPage(`report.html?userId=${encodeURIComponent(saved.userId)}&day=${saved.day}&from=mine`)
             } catch (e) {
                 this.errorMessage = e.message || '日报提交失败，请稍后重试'
                 this.submitting = false
@@ -177,7 +179,8 @@ export default {
             this.draftRestored = false
         },
         cancel() {
-            openPage('index.html')
+            const from = new URLSearchParams(window.location.search).get('from')
+            openPage(from === 'home' ? 'index.html' : 'myReports.html')
         }
     }
 }
@@ -186,25 +189,25 @@ export default {
 <style scoped>
 .editor-page { padding-top: 12px; }
 .editor-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-.editor-header h1 { font-size: 19px; }
-.text-button { padding: 8px 0; border: 0; background: transparent; color: #667085; cursor: pointer; }
+.editor-header h1 { color: #1f2937; font-size: 20px; }
+.text-button { min-height: 44px; padding: 8px 0; border: 0; background: transparent; color: #667085; cursor: pointer; }
 .header-spacer { width: 32px; }
-.form-card { margin-bottom: 12px; padding: 16px; border: 1px solid #e9edf3; border-radius: 12px; background: #fff; text-align: left; }
-.field-label, .field-heading label { color: #38445a; font-size: 14px; font-weight: 600; }
+.form-card { margin-bottom: 12px; padding: 16px; border: 1px solid #e4e7ec; border-radius: 12px; background: #fff; text-align: left; }
+.field-label, .field-heading label { color: #344054; font-size: 14px; font-weight: 600; }
 .title-label { display: block; margin-top: 16px; }
 .form-card input { margin-top: 9px; }
 .field-heading { display: flex; align-items: center; justify-content: space-between; }
-.field-heading span { color: #a2a9b5; font-size: 11px; }
-em { color: #e45858; font-style: normal; }
-.form-card textarea { box-sizing: border-box; width: 100%; min-height: 96px; margin-top: 10px; padding: 0; border: 0; outline: none; background: transparent; color: #27344a; font: inherit; font-size: 15px; line-height: 1.7; resize: vertical; }
-.form-card textarea::placeholder { color: #b0b7c3; }
+.field-heading span { color: #667085; font-size: 12px; font-variant-numeric: tabular-nums; }
+em { color: #d92d20; font-style: normal; }
+.form-card textarea { box-sizing: border-box; width: 100%; min-height: 96px; margin-top: 10px; padding: 0; border: 0; outline: none; background: transparent; color: #344054; font: inherit; font-size: 15px; line-height: 1.7; resize: none; }
+.form-card textarea::placeholder { color: #98a2b3; }
 .recipients-card { padding: 0 16px; }
-.recipient-row { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 58px; padding: 0; border: 0; border-bottom: 1px solid #edf0f4; background: transparent; color: #38445a; font-size: 14px; text-align: left; cursor: pointer; }
+.recipient-row { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 58px; padding: 0; border: 0; border-bottom: 1px solid #edf0f4; background: transparent; color: #344054; font-size: 14px; text-align: left; cursor: pointer; }
 .recipient-row:last-child { border-bottom: 0; }
-.recipient-row strong { max-width: 65%; overflow: hidden; color: #8992a2; font-size: 13px; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
-.recipient-row i { margin-left: 10px; color: #b1b8c4; font-size: 22px; font-style: normal; vertical-align: middle; }
-.submit-button { width: 100%; margin-top: 10px; padding: 13px; }
-.submit-note { margin: 12px 0 28px; color: #9aa3b1; font-size: 11px; }
-.draft-tip { margin-bottom: 12px; padding: 10px 12px; border-radius: 8px; background: #fff7e8; color: #9b6b21; font-size: 12px; text-align: left; }
-.draft-tip button { float: right; border: 0; background: transparent; color: #9b6b21; cursor: pointer; }
+.recipient-row strong { max-width: 65%; overflow: hidden; color: #475467; font-size: 13px; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
+.recipient-row i { margin-left: 10px; color: #667085; font-size: 22px; font-style: normal; vertical-align: middle; }
+.submit-button { width: 100%; min-height: 48px; margin-top: 10px; padding: 13px; }
+.submit-note { margin: 12px 0 28px; color: #667085; font-size: 12px; line-height: 1.6; }
+.draft-tip { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; padding: 8px 12px; border: 1px solid #fedf89; border-radius: 8px; background: #fffaeb; color: #93370d; font-size: 13px; text-align: left; }
+.draft-tip button { min-height: 44px; border: 0; background: transparent; color: #93370d; font-size: 13px; text-decoration: underline; cursor: pointer; }
 </style>

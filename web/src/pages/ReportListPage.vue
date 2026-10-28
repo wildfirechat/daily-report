@@ -1,6 +1,6 @@
 <template>
     <BaseLayout v-slot="{account}">
-        <ReportListView :account="account"/>
+        <ReportListView :account="account" mode="mine"/>
     </BaseLayout>
 </template>
 
@@ -13,7 +13,7 @@ export default {
     name: 'ReportListPage',
     components: {ReportListView, BaseLayout},
     created() {
-        document.title = '工作日报';
+        document.title = '我的日报';
     }
 }
 </script>
