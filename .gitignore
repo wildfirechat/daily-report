@@ -1,2 +1,4 @@
 server/src/main/resources/static
 daily_report.mv.db
+daily_report.lock.db
+daily_report.trace.db
