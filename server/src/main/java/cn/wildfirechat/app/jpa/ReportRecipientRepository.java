@@ -26,12 +26,15 @@ public interface ReportRecipientRepository extends JpaRepository<ReportRecipient
 
     @Query("select r from Report r " + REPORT_JOIN + " where p.recipientId = :recipientId and " + FILTER_CONDITION +
         " and (:cursorDay is null or r.day < :cursorDay " +
-        "or (r.day = :cursorDay and r.userId > :cursorUserId)) order by r.day desc, r.userId asc")
+        "or (r.day = :cursorDay and coalesce(r.updatedAt, r.day) < :cursorUpdatedAt) " +
+        "or (r.day = :cursorDay and coalesce(r.updatedAt, r.day) = :cursorUpdatedAt and r.userId > :cursorUserId)) " +
+        "order by r.day desc, coalesce(r.updatedAt, r.day) desc, r.userId asc")
     Slice<Report> getReceivedFeed(@Param("recipientId") String recipientId,
                                   @Param("keyword") String keyword,
                                   @Param("startDay") Long startDay,
                                   @Param("endDay") Long endDay,
                                   @Param("cursorDay") Long cursorDay,
+                                  @Param("cursorUpdatedAt") Long cursorUpdatedAt,
                                   @Param("cursorUserId") String cursorUserId,
                                   Pageable pageable);
 

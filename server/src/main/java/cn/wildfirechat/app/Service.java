@@ -18,7 +18,7 @@ public interface Service {
     RestResult getReportPage(int count, int offset, String keyword, Long startDay, Long endDay);
     RestResult getReceivedReports(int count, int offset, String keyword, Long startDay, Long endDay);
     RestResult getReportFeed(int count, String keyword, Long startDay, Long endDay, Long cursorDay);
-    RestResult getReceivedFeed(int count, String keyword, Long startDay, Long endDay, Long cursorDay, String cursorUserId);
+    RestResult getReceivedFeed(int count, String keyword, Long startDay, Long endDay, Long cursorDay, Long cursorUpdatedAt, String cursorUserId);
     RestResult getReportStats();
     RestResult getConfigData();
 }

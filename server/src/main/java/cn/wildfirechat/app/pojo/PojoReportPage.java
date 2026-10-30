@@ -9,6 +9,7 @@ public class PojoReportPage {
     public int offset;
     public boolean hasMore;
     public Long nextCursorDay;
+    public Long nextCursorUpdatedAt;
     public String nextCursorUserId;
 
     public PojoReportPage(List<PojoReport> items, long total, int count, int offset) {

@@ -117,6 +117,7 @@ export default {
             pageSize: 10,
             hasMore: false,
             nextCursorDay: null,
+            nextCursorUpdatedAt: null,
             nextCursorUserId: null,
             loading: false,
             loadingMore: false,
@@ -177,6 +178,9 @@ export default {
             if (append) {
                 filters.cursorDay = this.nextCursorDay
                 filters.cursorUserId = this.nextCursorUserId || undefined
+                if (!this.isMine) {
+                    filters.cursorUpdatedAt = this.nextCursorUpdatedAt || this.nextCursorDay
+                }
                 this.loadingMore = true
                 this.appendError = ''
             } else {
@@ -186,6 +190,7 @@ export default {
                 this.reports = []
                 this.hasMore = false
                 this.nextCursorDay = null
+                this.nextCursorUpdatedAt = null
                 this.nextCursorUserId = null
             }
             try {
@@ -194,6 +199,7 @@ export default {
                 if (currentRequest !== this.requestId) return
                 this.reports = append ? this.reports.concat(page.items) : page.items
                 this.nextCursorDay = page.nextCursorDay
+                this.nextCursorUpdatedAt = page.nextCursorUpdatedAt || null
                 this.nextCursorUserId = page.nextCursorUserId
                 this.hasMore = page.hasMore
             } catch (e) {

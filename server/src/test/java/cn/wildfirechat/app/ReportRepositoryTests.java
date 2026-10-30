@@ -58,8 +58,12 @@ public class ReportRepositoryTests {
     public void findsExactRecipientsAndUsesStableCursor() {
         saveReport(report("alice", 1000L, "First", "manager,lead", "audit"));
         saveReport(report("bob", 2000L, "Second", "manager2", "other"));
-        saveReport(report("carol", 3000L, "Third", "other", "manager"));
-        saveReport(report("dave", 3000L, "Fourth", "manager", ""));
+        Report carol = report("carol", 3000L, "Third", "other", "manager");
+        carol.updatedAt = 3000L;
+        saveReport(carol);
+        Report dave = report("dave", 3000L, "Fourth", "manager", "");
+        dave.updatedAt = 4000L;
+        saveReport(dave);
 
         Page<Report> page = recipientRepository.getReceivedReports("manager", null, null, null,
             new OffsetPageRequest(0, 20));
@@ -67,12 +71,12 @@ public class ReportRepositoryTests {
         assertEquals(3, recipientRepository.countByRecipientId("manager"));
 
         Slice<Report> first = recipientRepository.getReceivedFeed("manager", null, null, null, null,
-            null, PageRequest.of(0, 2));
+            null, null, PageRequest.of(0, 2));
         assertTrue(first.hasNext());
-        assertEquals("carol", first.getContent().get(0).userId);
-        assertEquals("dave", first.getContent().get(1).userId);
+        assertEquals("dave", first.getContent().get(0).userId);
+        assertEquals("carol", first.getContent().get(1).userId);
         Slice<Report> second = recipientRepository.getReceivedFeed("manager", null, null, null, 3000L,
-            "dave", PageRequest.of(0, 2));
+            3000L, "carol", PageRequest.of(0, 2));
         assertFalse(second.hasNext());
         assertEquals(1, second.getContent().size());
         assertEquals("alice", second.getContent().get(0).userId);

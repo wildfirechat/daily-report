@@ -134,8 +134,9 @@ public class ApiController {
                                   @RequestParam(required = false) Long startDay,
                                   @RequestParam(required = false) Long endDay,
                                   @RequestParam(required = false) Long cursorDay,
+                                  @RequestParam(required = false) Long cursorUpdatedAt,
                                   @RequestParam(required = false) String cursorUserId) {
-        return mService.getReceivedFeed(count, keyword, startDay, endDay, cursorDay, cursorUserId);
+        return mService.getReceivedFeed(count, keyword, startDay, endDay, cursorDay, cursorUpdatedAt, cursorUserId);
     }
 
     @GetMapping(value = "user/report_stats", produces = "application/json;charset=UTF-8")

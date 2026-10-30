@@ -117,12 +117,12 @@ mvn spring-boot:run
 - `GET /api/user/report/{userId}/{day}`：按权限读取日报。
 - `DELETE /api/user/report/{day}`：删除当前用户指定日期的日报。
 - `GET /api/user/report_feed`：我的日报游标分页，下一页传 `cursorDay`。
-- `GET /api/user/received_feed`：汇报箱游标分页，下一页传 `cursorDay` 和 `cursorUserId`。
+- `GET /api/user/received_feed`：汇报箱游标分页，下一页传 `cursorDay`、`cursorUpdatedAt` 和 `cursorUserId`。
 - `GET /api/user/report_list`：我的日报旧 offset 接口；传 `paged=true` 时返回 `items/total/hasMore`，否则保留原数组响应。
 - `GET /api/user/received_list`：汇报箱旧 offset 分页接口。
 - `GET /api/user/report_stats`：当前用户统计。
 
-所有列表接口支持 `count`、`keyword`、`startDay`、`endDay`；旧接口另支持 `offset`，游标接口另支持上述游标参数。日期使用毫秒时间戳，`count` 最大为 100。游标接口返回 `items/hasMore/nextCursorDay/nextCursorUserId`，其中 `total` 固定为 `-1`，表示未执行额外的全量计数。
+所有列表接口支持 `count`、`keyword`、`startDay`、`endDay`；旧接口另支持 `offset`，游标接口另支持上述游标参数。日期使用毫秒时间戳，`count` 最大为 100。游标接口返回 `items/hasMore/nextCursorDay/nextCursorUpdatedAt/nextCursorUserId`，其中 `total` 固定为 `-1`，表示未执行额外的全量计数。
 
 ## 验证
 

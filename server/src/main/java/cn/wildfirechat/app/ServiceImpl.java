@@ -420,18 +420,19 @@ public class ServiceImpl implements Service {
     }
 
     @Override
-    public RestResult getReceivedFeed(int count, String keyword, Long startDay, Long endDay, Long cursorDay, String cursorUserId) {
+    public RestResult getReceivedFeed(int count, String keyword, Long startDay, Long endDay, Long cursorDay, Long cursorUpdatedAt, String cursorUserId) {
         String userId = getUserId();
         if (!StringUtils.hasText(userId)) {
             return RestResult.error(ERROR_NOT_LOGIN);
         }
         RestResult validationError = validateQuery(count, 0, keyword, startDay, endDay);
-        if (validationError != null || (cursorDay != null && !StringUtils.hasText(cursorUserId))
+        if (validationError != null
+            || (cursorDay != null && (!StringUtils.hasText(cursorUserId) || cursorUpdatedAt == null))
             || (cursorUserId != null && cursorUserId.length() > MAX_USER_ID_LENGTH)) {
             return RestResult.error(ERROR_INVALID_PARAMETER);
         }
         Slice<Report> reports = reportRecipientRepository.getReceivedFeed(userId, searchPattern(keyword), startDay,
-            endDay, cursorDay, cursorUserId, PageRequest.of(0, count));
+            endDay, cursorDay, cursorUpdatedAt, cursorUserId, PageRequest.of(0, count));
         return RestResult.ok(convertFeed(reports, count, true));
     }
 
@@ -524,6 +525,7 @@ public class ServiceImpl implements Service {
             PojoReport last = items.get(items.size() - 1);
             result.nextCursorDay = last.day;
             if (includeUserCursor) {
+                result.nextCursorUpdatedAt = last.updatedAt == null ? last.day : last.updatedAt;
                 result.nextCursorUserId = last.userId;
             }
         }
