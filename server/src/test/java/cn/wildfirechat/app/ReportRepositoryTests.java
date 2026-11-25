@@ -84,6 +84,29 @@ public class ReportRepositoryTests {
             new OffsetPageRequest(0, 20)).getContent().size() == 1);
     }
 
+    @Test
+    public void escapedLikeWildcardsMatchLiterally() {
+        saveReport(report("alice", 1000L, "Progress 100% done", "manager", ""));
+        saveReport(report("alice", 2000L, "Progress 1000 done", "manager", ""));
+        saveReport(report("alice", 3000L, "foo_bar task", "manager", ""));
+        saveReport(report("alice", 4000L, "fooxbar task", "manager", ""));
+
+        Page<Report> percentMatches = reportRepository.getUserReports("alice", "%100!%%", null, null,
+            new OffsetPageRequest(0, 10));
+        assertEquals(1, percentMatches.getTotalElements());
+        assertEquals(1000L, percentMatches.getContent().get(0).day);
+
+        Page<Report> underscoreMatches = recipientRepository.getReceivedReports("manager", "%foo!_bar%", null, null,
+            new OffsetPageRequest(0, 10));
+        assertEquals(1, underscoreMatches.getTotalElements());
+        assertEquals(3000L, underscoreMatches.getContent().get(0).day);
+
+        Slice<Report> receivedFeed = recipientRepository.getReceivedFeed("manager", "%foo!_bar%", null, null,
+            null, null, null, PageRequest.of(0, 10));
+        assertEquals(1, receivedFeed.getContent().size());
+        assertEquals(3000L, receivedFeed.getContent().get(0).day);
+    }
+
     private void saveReport(Report report) {
         reportRepository.save(report);
         Set<String> recipients = new LinkedHashSet<>();

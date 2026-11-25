@@ -1,17 +1,17 @@
 <template>
     <BaseLayout v-slot="{account}">
-        <ReportListView :account="account" mode="received"/>
+        <AppShell :account="account" initial-view="received"/>
     </BaseLayout>
 </template>
 
 <script>
 import '../jssdk/bridgeClientImpl.uni'
-import ReportListView from "@/components/ReportListView";
+import AppShell from "@/components/AppShell";
 import BaseLayout from "@/components/BaseLayout";
 
 export default {
     name: 'InboxPage',
-    components: {ReportListView, BaseLayout},
+    components: {AppShell, BaseLayout},
     created() {
         document.title = '汇报箱';
     }

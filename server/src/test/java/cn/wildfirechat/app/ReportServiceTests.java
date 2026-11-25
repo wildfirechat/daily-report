@@ -5,6 +5,7 @@ import cn.wildfirechat.app.jpa.ReportRecipientRepository;
 import cn.wildfirechat.app.jpa.ReportRepository;
 import cn.wildfirechat.app.jpa.UserDayId;
 import cn.wildfirechat.app.pojo.PojoReport;
+import cn.wildfirechat.app.shiro.CsrfFilter;
 import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.session.Session;
 import org.apache.shiro.subject.Subject;
@@ -16,10 +17,16 @@ import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.data.domain.SliceImpl;
+import org.springframework.mock.web.MockFilterChain;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collections;
 import java.util.Optional;
 
 import static org.junit.Assert.assertEquals;
@@ -138,6 +145,66 @@ public class ReportServiceTests {
     public void deletingUnknownReportReturnsNotFound() {
         when(reportRepository.findById(any(UserDayId.class))).thenReturn(Optional.empty());
         assertEquals(RestResult.RestCode.ERROR_NOT_EXIST.code, service.deleteReport(0).getCode());
+    }
+
+    @Test
+    public void feedNormalizesDateBoundsAndEscapesWildcards() {
+        Calendar noon = Calendar.getInstance();
+        noon.set(2026, Calendar.NOVEMBER, 25, 12, 34, 56);
+        noon.set(Calendar.MILLISECOND, 789);
+        Calendar midnight = (Calendar) noon.clone();
+        midnight.set(Calendar.HOUR_OF_DAY, 0);
+        midnight.set(Calendar.MINUTE, 0);
+        midnight.set(Calendar.SECOND, 0);
+        midnight.set(Calendar.MILLISECOND, 0);
+
+        when(reportRepository.getUserFeed(anyString(), any(), any(), any(), any(), any()))
+            .thenReturn(new SliceImpl<>(Collections.emptyList()));
+
+        RestResult result = service.getReportFeed(10, "100%_test!x", noon.getTimeInMillis(), noon.getTimeInMillis(), null);
+        assertEquals(RestResult.RestCode.SUCCESS.code, result.getCode());
+
+        ArgumentCaptor<String> keywordCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Long> startCaptor = ArgumentCaptor.forClass(Long.class);
+        ArgumentCaptor<Long> endCaptor = ArgumentCaptor.forClass(Long.class);
+        verify(reportRepository).getUserFeed(anyString(), keywordCaptor.capture(), startCaptor.capture(),
+            endCaptor.capture(), any(), any());
+        assertEquals("%100!%!_test!!x%", keywordCaptor.getValue());
+        assertEquals(Long.valueOf(midnight.getTimeInMillis()), startCaptor.getValue());
+        assertEquals(Long.valueOf(midnight.getTimeInMillis()), endCaptor.getValue());
+    }
+
+    @Test
+    public void legacyNullFieldsAreCoercedToEmptyStrings() {
+        Report legacy = storedReport("alice", "manager", "");
+        legacy.title = null;
+        legacy.content = null;
+        legacy.tomorrowPlan = null;
+        legacy.requirement = null;
+        when(reportRepository.findById(any(UserDayId.class))).thenReturn(Optional.of(legacy));
+
+        RestResult result = service.getReport("alice", legacy.day);
+        assertEquals(RestResult.RestCode.SUCCESS.code, result.getCode());
+        PojoReport converted = (PojoReport) result.getResult();
+        assertEquals("日报", converted.title);
+        assertEquals("", converted.content);
+        assertEquals("", converted.tomorrowPlan);
+        assertEquals("", converted.requirement);
+    }
+
+    @Test
+    public void csrfCookieUsesSameSiteNoneWhenSslEnabled() throws Exception {
+        CsrfFilter filter = new CsrfFilter();
+        ReflectionTestUtils.setField(filter, "allClientSupportSsl", true);
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/account");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        filter.doFilter(request, response, new MockFilterChain());
+
+        String setCookie = response.getHeader("Set-Cookie");
+        assertNotNull(setCookie);
+        assertTrue(setCookie.contains("SameSite=None"));
+        assertTrue(setCookie.contains("Secure"));
     }
 
     private PojoReport validReport() {

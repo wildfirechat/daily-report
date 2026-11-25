@@ -3,7 +3,7 @@
         <SplashView v-if="status === 0"/>
         <slot v-else-if="status === 1" :account="account"/>
         <ErrorView v-else :type="loginErrorType" @retry="retryLogin"/>
-        <ToastHost/>
+        <ToastHost :ready="status === 1"/>
     </div>
 </template>
 
@@ -12,6 +12,7 @@ import SplashView from "@/components/SplashView";
 import ErrorView from "@/components/ErrorView";
 import ToastHost from "@/components/ToastHost";
 import api from "@/api/api";
+import {setReloginHandler} from "@/api/axios.config";
 import wf from "@/jssdk/wf";
 import {isBridgeAvailable} from "@/jssdk/util";
 
@@ -49,8 +50,10 @@ export default {
             this.failLogin('bridge', this.loginAttempt)
         })
         this.beginLogin()
+        setReloginHandler(() => this.silentRelogin())
     },
     beforeUnmount() {
+        setReloginHandler(null)
         this.clearLoginTimeout()
     },
     methods: {
@@ -180,6 +183,27 @@ export default {
         },
         retryLogin() {
             this.beginLogin()
+        },
+        async silentRelogin() {
+            if (!isBridgeAvailable() || !this.bridgeReady) {
+                throw new Error('Bridge not ready')
+            }
+            const configData = await api.getConfigData()
+            const authCode = await new Promise((resolve, reject) => {
+                try {
+                    wf.biz.getAuthCode(configData.appId, configData.appType, resolve, reject)
+                } catch (e) {
+                    reject(e)
+                }
+            })
+            const account = await api.login({
+                appId: configData.appId,
+                appType: configData.appType,
+                authCode: authCode
+            })
+            this.account = account
+            this.loginStatus = 1
+            return account
         }
     },
     computed: {

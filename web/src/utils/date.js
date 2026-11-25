@@ -10,7 +10,9 @@ export function fromDateInput(value) {
         return null
     }
     const [year, month, day] = value.split('-').map(Number)
-    return new Date(year, month - 1, day).getTime()
+    // Use local noon so client/server timezone offsets (e.g. UTC+8 client vs UTC server)
+    // normalize to the same calendar day on the server.
+    return new Date(year, month - 1, day, 12, 0, 0).getTime()
 }
 
 export function formatDate(timestamp) {

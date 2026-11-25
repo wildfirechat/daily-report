@@ -12,9 +12,9 @@ import java.util.List;
 public interface ReportRepository extends JpaRepository<Report, UserDayId> {
     String FILTER_CONDITION = "(:startDay is null or r.day >= :startDay) " +
         "and (:endDay is null or r.day <= :endDay) " +
-        "and (:keyword is null or lower(r.title) like :keyword " +
-        "or lower(r.content) like :keyword or lower(r.tomorrowPlan) like :keyword " +
-        "or lower(r.requirement) like :keyword)";
+        "and (:keyword is null or lower(r.title) like :keyword escape '!' " +
+        "or lower(r.content) like :keyword escape '!' or lower(r.tomorrowPlan) like :keyword escape '!' " +
+        "or lower(r.requirement) like :keyword escape '!')";
 
     @Query("select r from Report r where r.userId = :userId and " + FILTER_CONDITION +
         " order by r.day desc, r.updatedAt desc")

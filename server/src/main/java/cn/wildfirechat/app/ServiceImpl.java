@@ -384,8 +384,10 @@ public class ServiceImpl implements Service {
         if (validationError != null) {
             return validationError;
         }
-        Page<Report> page = reportRepository.getUserReports(userId, searchPattern(keyword), startDay, endDay,
-            new OffsetPageRequest(offset, count));
+        Long normalizedStart = normalizeOptionalDay(startDay);
+        Long normalizedEnd = normalizeOptionalDay(endDay);
+        Page<Report> page = reportRepository.getUserReports(userId, searchPattern(keyword), normalizedStart,
+            normalizedEnd, new OffsetPageRequest(offset, count));
         return RestResult.ok(convertPage(page, count, offset));
     }
 
@@ -399,8 +401,10 @@ public class ServiceImpl implements Service {
         if (validationError != null) {
             return validationError;
         }
+        Long normalizedStart = normalizeOptionalDay(startDay);
+        Long normalizedEnd = normalizeOptionalDay(endDay);
         Page<Report> page = reportRecipientRepository.getReceivedReports(userId, searchPattern(keyword),
-            startDay, endDay, new OffsetPageRequest(offset, count));
+            normalizedStart, normalizedEnd, new OffsetPageRequest(offset, count));
         return RestResult.ok(convertPage(page, count, offset));
     }
 
@@ -414,8 +418,10 @@ public class ServiceImpl implements Service {
         if (validationError != null) {
             return validationError;
         }
-        Slice<Report> reports = reportRepository.getUserFeed(userId, searchPattern(keyword), startDay, endDay,
-            cursorDay, PageRequest.of(0, count));
+        Long normalizedStart = normalizeOptionalDay(startDay);
+        Long normalizedEnd = normalizeOptionalDay(endDay);
+        Slice<Report> reports = reportRepository.getUserFeed(userId, searchPattern(keyword), normalizedStart,
+            normalizedEnd, cursorDay, PageRequest.of(0, count));
         return RestResult.ok(convertFeed(reports, count, false));
     }
 
@@ -431,8 +437,10 @@ public class ServiceImpl implements Service {
             || (cursorUserId != null && cursorUserId.length() > MAX_USER_ID_LENGTH)) {
             return RestResult.error(ERROR_INVALID_PARAMETER);
         }
-        Slice<Report> reports = reportRecipientRepository.getReceivedFeed(userId, searchPattern(keyword), startDay,
-            endDay, cursorDay, cursorUpdatedAt, cursorUserId, PageRequest.of(0, count));
+        Long normalizedStart = normalizeOptionalDay(startDay);
+        Long normalizedEnd = normalizeOptionalDay(endDay);
+        Slice<Report> reports = reportRecipientRepository.getReceivedFeed(userId, searchPattern(keyword),
+            normalizedStart, normalizedEnd, cursorDay, cursorUpdatedAt, cursorUserId, PageRequest.of(0, count));
         return RestResult.ok(convertFeed(reports, count, true));
     }
 
@@ -588,7 +596,18 @@ public class ServiceImpl implements Service {
     }
 
     private String searchPattern(String keyword) {
-        return StringUtils.hasText(keyword) ? "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%" : null;
+        if (!StringUtils.hasText(keyword)) {
+            return null;
+        }
+        String escaped = keyword.trim().toLowerCase(Locale.ROOT)
+            .replace("!", "!!")
+            .replace("%", "!%")
+            .replace("_", "!_");
+        return "%" + escaped + "%";
+    }
+
+    private Long normalizeOptionalDay(Long day) {
+        return day == null ? null : normalizeDay(day);
     }
 
     private long getToday() {
@@ -630,10 +649,10 @@ public class ServiceImpl implements Service {
         PojoReport result = new PojoReport();
         result.userId = report.userId;
         result.day = report.day;
-        result.title = report.title;
-        result.content = report.content;
-        result.tomorrowPlan = report.tomorrowPlan;
-        result.requirement = report.requirement;
+        result.title = StringUtils.hasText(report.title) ? report.title : "日报";
+        result.content = report.content == null ? "" : report.content;
+        result.tomorrowPlan = report.tomorrowPlan == null ? "" : report.tomorrowPlan;
+        result.requirement = report.requirement == null ? "" : report.requirement;
         result.displayName = StringUtils.hasText(report.displayName) ? report.displayName : report.userId;
         result.createdAt = report.createdAt;
         result.updatedAt = report.updatedAt;
@@ -681,6 +700,9 @@ public class ServiceImpl implements Service {
     }
 
     private String summary(String content) {
+        if (content == null) {
+            return "";
+        }
         return content.length() > 40 ? content.substring(0, 40) + "..." : content;
     }
 

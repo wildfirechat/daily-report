@@ -15,6 +15,7 @@ let eventListeners = {};
 let requestId = 0;
 
 let uniappBridgeReady = false;
+let pendingCalls = [];
 
 export function initUniappBridge() {
     window.__messageFromUni = (data) => {
@@ -41,13 +42,13 @@ export function initUniappBridge() {
 }
 
 function call(handlerName, args, callback) {
-    if (!uniappBridgeReady){
-        console.error('uniapp bridge not ready!')
+    if (!uniappBridgeReady) {
+        pendingCalls.push({handlerName, args, callback});
         return;
     }
     let reqId = 0;
     if (callback && typeof callback === 'function') {
-        reqId = requestId++;
+        reqId = ++requestId;
         callbackMap.set(reqId, callback)
     }
     let appUrl = location.href;
@@ -55,6 +56,16 @@ function call(handlerName, args, callback) {
     console.log('wf-op-request', obj)
     uni.postMessage({data: {obj: JSON.stringify(obj)}})
     // uni.send(JSON.stringify(obj));
+}
+
+function flushPendingCalls() {
+    if (!pendingCalls.length) {
+        return;
+    }
+    const queue = pendingCalls.splice(0, pendingCalls.length);
+    for (const item of queue) {
+        call(item.handlerName, item.args, item.callback);
+    }
 }
 
 function handleOpResponse(requestId, args) {
@@ -79,6 +90,7 @@ if (navigator.userAgent.indexOf('uni-app') >= 0) {
     document.addEventListener('UniAppJSBridgeReady', () => {
         uniappBridgeReady = true;
         console.log('receive UniAppJSBridgeReady event')
+        flushPendingCalls();
         uni.getEnv((res) => {
             console.log('当前环境：' + JSON.stringify(res));
             // web 端 h5: true

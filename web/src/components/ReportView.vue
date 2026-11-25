@@ -62,12 +62,19 @@ import api from "@/api/api";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import {formatDate, formatDateTime} from '@/utils/date'
 import {queueToast} from '@/utils/toast'
-import {openPage} from '@/utils/navigation'
+import {openEditorWindow} from '@/utils/navigation'
 
 export default {
     name: "ReportView",
     components: {ConfirmDialog},
-    props: {account: {type: String, required: true}},
+    emits: ['navigate'],
+    props: {
+        account: {type: String, required: true},
+        userId: {type: String, default: ''},
+        day: {type: [Number, String], default: 0},
+        from: {type: String, default: ''},
+        refreshKey: {type: Number, default: 0}
+    },
     data() {
         return {
             report: null,
@@ -76,7 +83,8 @@ export default {
             terminalError: false,
             actionError: '',
             showDeleteConfirm: false,
-            deleting: false
+            deleting: false,
+            requestId: 0
         }
     },
     computed: {
@@ -94,43 +102,76 @@ export default {
             return `确定删除《${this.report.title || '日报'}》吗？删除后无法恢复。`
         },
         fromMode() {
-            return new URLSearchParams(window.location.search).get('from')
+            return this.from || new URLSearchParams(window.location.search).get('from') || ''
+        },
+        targetUserId() {
+            return this.userId || new URLSearchParams(window.location.search).get('userId') || this.account
+        },
+        targetDay() {
+            const propDay = Number(this.day)
+            if (propDay > 0) {
+                return propDay
+            }
+            return Number(new URLSearchParams(window.location.search).get('day')) || Date.now()
+        },
+        reportLoadKey() {
+            return `${this.targetUserId}|${this.targetDay}|${this.refreshKey}`
+        },
+        isReceivedContext() {
+            if (this.fromMode === 'received') {
+                return true
+            }
+            if (this.fromMode === 'mine' || this.fromMode === 'home') {
+                return false
+            }
+            if (this.report) {
+                return !this.isOwner
+            }
+            return this.targetUserId !== this.account
         },
         backLabel() {
-            if (this.fromMode === 'received' || (this.fromMode !== 'mine' && this.report && !this.isOwner)) {
-                return '返回汇报箱'
+            if (this.fromMode === 'home') {
+                return '返回首页'
             }
-            return '返回我的日报'
+            return this.isReceivedContext ? '返回汇报箱' : '返回我的日报'
         }
     },
-    created() {
-        this.getReport()
+    watch: {
+        reportLoadKey: {
+            immediate: true,
+            handler() {
+                this.getReport()
+            }
+        }
     },
     methods: {
         formatDate,
         formatDateTime,
         async getReport() {
+            const currentRequest = ++this.requestId
             this.loading = true
             this.errorMessage = ''
             this.actionError = ''
             this.terminalError = false
-            const params = new URLSearchParams(window.location.search)
-            const userId = params.get('userId') || this.account
-            const day = Number(params.get('day')) || Date.now()
             try {
-                this.report = await api.getReport(userId, day)
+                const report = await api.getReport(this.targetUserId, this.targetDay)
+                if (currentRequest !== this.requestId) return
+                this.report = report
             } catch (e) {
+                if (currentRequest !== this.requestId) return
                 this.report = null
                 this.terminalError = e.code === 16
                 this.errorMessage = e.code === 16
                     ? '日报不存在或无权查看'
                     : (e.message || '日报加载失败')
             } finally {
-                this.loading = false
+                if (currentRequest === this.requestId) {
+                    this.loading = false
+                }
             }
         },
         editReport() {
-            openPage(`newReport.html?day=${this.report.day}`)
+            openEditorWindow(`newReport.html?day=${this.report.day}&from=detail`)
         },
         requestDelete() {
             this.actionError = ''
@@ -141,8 +182,11 @@ export default {
             this.deleting = true
             try {
                 await api.deleteReport(this.report.day)
+                this.showDeleteConfirm = false
                 queueToast('日报已删除')
-                openPage('myReports.html')
+                this.$emit('navigate', {
+                    view: this.fromMode === 'home' ? 'home' : 'mine'
+                }, {replace: true})
             } catch (e) {
                 this.showDeleteConfirm = false
                 this.actionError = e.message || '删除失败，请稍后重试'
@@ -151,7 +195,11 @@ export default {
             }
         },
         backToList() {
-            openPage(this.backLabel === '返回汇报箱' ? 'inbox.html' : 'myReports.html')
+            if (this.fromMode === 'home') {
+                this.$emit('navigate', {view: 'home'})
+                return
+            }
+            this.$emit('navigate', {view: this.isReceivedContext ? 'received' : 'mine'})
         }
     }
 }

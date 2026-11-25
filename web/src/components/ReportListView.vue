@@ -102,13 +102,15 @@
 <script>
 import api from "@/api/api";
 import {formatDate, formatDateTime, fromDateInput} from '@/utils/date'
-import {openPage} from '@/utils/navigation'
+import {openEditorWindow} from '@/utils/navigation'
 
 export default {
     name: "ReportListView",
+    emits: ['navigate'],
     props: {
         account: {type: String, required: true},
-        mode: {type: String, default: 'mine'}
+        mode: {type: String, default: 'mine'},
+        refreshKey: {type: Number, default: 0}
     },
     data() {
         return {
@@ -124,7 +126,8 @@ export default {
             listError: '',
             filterError: '',
             appendError: '',
-            requestId: 0
+            requestId: 0,
+            lastRefreshAt: 0
         }
     },
     computed: {
@@ -153,8 +156,23 @@ export default {
             return this.hasMore ? `已加载 ${this.reports.length} 篇` : `共 ${this.reports.length} 篇`
         }
     },
+    watch: {
+        refreshKey() {
+            this.loadReports(false, {silent: true})
+        }
+    },
     created() {
         this.loadReports(false)
+    },
+    mounted() {
+        document.addEventListener('visibilitychange', this.handleVisibilityChange)
+        window.addEventListener('focus', this.handleResume)
+        window.addEventListener('pageshow', this.handlePageShow)
+    },
+    beforeUnmount() {
+        document.removeEventListener('visibilitychange', this.handleVisibilityChange)
+        window.removeEventListener('focus', this.handleResume)
+        window.removeEventListener('pageshow', this.handlePageShow)
     },
     methods: {
         formatDate,
@@ -166,13 +184,18 @@ export default {
                 endDay: fromDateInput(this.filters.endDate) || undefined
             }
         },
-        async loadReports(append) {
+        async loadReports(append, options = {}) {
+            const silent = Boolean(options && options.silent)
             if (!append && this.filters.startDate && this.filters.endDate
                 && this.filters.startDate > this.filters.endDate) {
-                this.filterError = '开始日期不能晚于结束日期'
+                if (!silent) {
+                    this.filterError = '开始日期不能晚于结束日期'
+                }
                 return
             }
-            this.filterError = ''
+            if (!silent) {
+                this.filterError = ''
+            }
             const currentRequest = ++this.requestId
             const filters = this.queryFilters()
             if (append) {
@@ -184,14 +207,17 @@ export default {
                 this.loadingMore = true
                 this.appendError = ''
             } else {
-                this.loading = true
-                this.listError = ''
-                this.appendError = ''
-                this.reports = []
-                this.hasMore = false
-                this.nextCursorDay = null
-                this.nextCursorUpdatedAt = null
-                this.nextCursorUserId = null
+                this.lastRefreshAt = Date.now()
+                if (!silent) {
+                    this.loading = true
+                    this.listError = ''
+                    this.appendError = ''
+                    this.reports = []
+                    this.hasMore = false
+                    this.nextCursorDay = null
+                    this.nextCursorUpdatedAt = null
+                    this.nextCursorUserId = null
+                }
             }
             try {
                 const request = this.isMine ? api.getReportFeed : api.getReceivedFeed
@@ -202,11 +228,15 @@ export default {
                 this.nextCursorUpdatedAt = page.nextCursorUpdatedAt || null
                 this.nextCursorUserId = page.nextCursorUserId
                 this.hasMore = page.hasMore
+                if (!append) {
+                    this.listError = ''
+                    this.appendError = ''
+                }
             } catch (e) {
                 if (currentRequest !== this.requestId) return
                 if (append) {
                     this.appendError = e.message || '加载更多失败，请稍后重试'
-                } else {
+                } else if (!silent) {
                     this.listError = e.message || '日报加载失败，请稍后重试'
                 }
             } finally {
@@ -215,6 +245,22 @@ export default {
                     this.loadingMore = false
                 }
             }
+        },
+        handleVisibilityChange() {
+            if (document.visibilityState === 'visible') {
+                this.handleResume()
+            }
+        },
+        handlePageShow(event) {
+            if (event && event.persisted) {
+                this.handleResume()
+            }
+        },
+        handleResume() {
+            if (this.loading || this.loadingMore || Date.now() - this.lastRefreshAt < 800) {
+                return
+            }
+            this.loadReports(false, {silent: true})
         },
         applyFilters() {
             this.loadReports(false)
@@ -225,13 +271,18 @@ export default {
             this.loadReports(false)
         },
         writeReport() {
-            openPage('newReport.html?from=mine')
+            openEditorWindow('newReport.html?from=mine')
         },
         goHome() {
-            openPage('index.html')
+            this.$emit('navigate', {view: 'home'})
         },
         showReportDetail(report) {
-            openPage(`report.html?userId=${encodeURIComponent(report.userId)}&day=${report.day}&from=${this.mode}`)
+            this.$emit('navigate', {
+                view: 'detail',
+                userId: report.userId,
+                day: report.day,
+                from: this.mode
+            })
         }
     }
 }

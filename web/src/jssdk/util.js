@@ -4,7 +4,7 @@ import { initWeb } from './bridgeClientImpl.web';
 export function _handleNativeCall(successCB, failCB) {
     return (result) => {
         console.log('native callback result', result);
-        if (result.code === 0) {
+        if (result && result.code === 0) {
             if (typeof result.data === 'string') {
                 try {
                     let obj = JSON.parse(result.data);
@@ -16,7 +16,7 @@ export function _handleNativeCall(successCB, failCB) {
                 successCB && successCB(result.data);
             }
         } else {
-            failCB && failCB(result.code);
+            failCB && failCB(result && result.code);
         }
     }
 }

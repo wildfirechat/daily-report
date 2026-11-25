@@ -21,7 +21,7 @@
         </p>
 
         <section class="home-actions" aria-label="快捷入口">
-            <button class="action-card action-primary" type="button" @click="go('newReport.html?from=home')">
+            <button class="action-card action-primary" type="button" @click="writeReport">
                 <span class="action-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                          stroke-linecap="round" stroke-linejoin="round">
@@ -37,7 +37,7 @@
             </button>
 
             <div class="action-grid">
-                <button class="action-card" type="button" @click="go('myReports.html')">
+                <button class="action-card" type="button" @click="go('mine')">
                     <span class="action-icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                              stroke-linecap="round" stroke-linejoin="round">
@@ -55,7 +55,7 @@
                     <span class="action-chevron" aria-hidden="true">›</span>
                 </button>
 
-                <button class="action-card" type="button" @click="go('inbox.html')">
+                <button class="action-card" type="button" @click="go('received')">
                     <span class="action-icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                              stroke-linecap="round" stroke-linejoin="round">
@@ -77,16 +77,21 @@
 
 <script>
 import api from "@/api/api";
-import {formatDate} from '@/utils/date'
-import {openPage} from '@/utils/navigation'
+import {formatDate, fromDateInput, toDateInput} from '@/utils/date'
+import {openEditorWindow} from '@/utils/navigation'
 
 export default {
     name: "HomeView",
+    emits: ['navigate'],
+    props: {
+        refreshKey: {type: Number, default: 0}
+    },
     data() {
         return {
             stats: {todaySubmitted: false, monthCount: 0, totalCount: 0, receivedCount: 0},
             statsError: false,
-            statsLoading: true
+            statsLoading: true,
+            lastRefreshAt: 0
         }
     },
     computed: {
@@ -103,23 +108,70 @@ export default {
             return this.stats.todaySubmitted ? 'status-submitted' : 'pending'
         }
     },
+    watch: {
+        refreshKey() {
+            this.loadStats(true)
+        }
+    },
     created() {
         this.loadStats()
     },
+    mounted() {
+        document.addEventListener('visibilitychange', this.handleVisibilityChange)
+        window.addEventListener('focus', this.handleResume)
+        window.addEventListener('pageshow', this.handlePageShow)
+    },
+    beforeUnmount() {
+        document.removeEventListener('visibilitychange', this.handleVisibilityChange)
+        window.removeEventListener('focus', this.handleResume)
+        window.removeEventListener('pageshow', this.handlePageShow)
+    },
     methods: {
-        async loadStats() {
-            this.statsError = false
-            this.statsLoading = true
+        async loadStats(silent = false) {
+            if (!silent) {
+                this.statsError = false
+                this.statsLoading = true
+            }
+            this.lastRefreshAt = Date.now()
             try {
                 this.stats = await api.getReportStats()
+                this.statsError = false
             } catch (e) {
-                this.statsError = true
+                if (!silent) {
+                    this.statsError = true
+                }
             } finally {
-                this.statsLoading = false
+                if (!silent) {
+                    this.statsLoading = false
+                }
             }
         },
-        go(page) {
-            openPage(page)
+        handleVisibilityChange() {
+            if (document.visibilityState === 'visible') {
+                this.handleResume()
+            }
+        },
+        handlePageShow(event) {
+            if (event && event.persisted) {
+                this.handleResume()
+            }
+        },
+        handleResume() {
+            if (this.statsLoading || Date.now() - this.lastRefreshAt < 800) {
+                return
+            }
+            this.loadStats(true)
+        },
+        writeReport() {
+            if (!this.statsUnavailable && this.stats.todaySubmitted) {
+                const todayDay = fromDateInput(toDateInput(Date.now()))
+                openEditorWindow(`newReport.html?day=${todayDay}&from=home`)
+                return
+            }
+            openEditorWindow('newReport.html?from=home')
+        },
+        go(view) {
+            this.$emit('navigate', {view})
         }
     }
 }

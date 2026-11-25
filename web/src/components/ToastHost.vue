@@ -10,10 +10,13 @@
 </template>
 
 <script>
-import {consumeToast} from '@/utils/toast'
+import {TOAST_EVENT, TOAST_KEY, consumeToast} from '@/utils/toast'
 
 export default {
     name: 'ToastHost',
+    props: {
+        ready: {type: Boolean, default: true}
+    },
     data() {
         return {
             visible: false,
@@ -22,21 +25,60 @@ export default {
             timer: null
         }
     },
-    mounted() {
-        const toast = consumeToast()
-        if (!toast || !toast.message) {
-            return
+    watch: {
+        ready: {
+            immediate: true,
+            handler(isReady) {
+                if (isReady) {
+                    this.checkToast()
+                }
+            }
         }
-        this.message = toast.message
-        this.type = toast.type || 'success'
-        this.visible = true
-        this.timer = window.setTimeout(() => {
-            this.visible = false
-        }, 3200)
+    },
+    mounted() {
+        document.addEventListener('visibilitychange', this.handleVisibilityChange)
+        window.addEventListener('focus', this.checkToast)
+        window.addEventListener(TOAST_EVENT, this.checkToast)
+        window.addEventListener('storage', this.handleStorage)
     },
     beforeUnmount() {
+        document.removeEventListener('visibilitychange', this.handleVisibilityChange)
+        window.removeEventListener('focus', this.checkToast)
+        window.removeEventListener(TOAST_EVENT, this.checkToast)
+        window.removeEventListener('storage', this.handleStorage)
         if (this.timer) {
             window.clearTimeout(this.timer)
+        }
+    },
+    methods: {
+        handleStorage(event) {
+            if (event && event.key === TOAST_KEY && event.newValue) {
+                this.checkToast()
+            }
+        },
+        handleVisibilityChange() {
+            if (document.visibilityState === 'visible') {
+                this.checkToast()
+            }
+        },
+        checkToast() {
+            if (!this.ready) {
+                return
+            }
+            const toast = consumeToast()
+            if (!toast || !toast.message) {
+                return
+            }
+            this.message = toast.message
+            this.type = toast.type || 'success'
+            this.visible = true
+            if (this.timer) {
+                window.clearTimeout(this.timer)
+            }
+            this.timer = window.setTimeout(() => {
+                this.visible = false
+                this.timer = null
+            }, 3200)
         }
     }
 }

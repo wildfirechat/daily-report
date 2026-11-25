@@ -2,6 +2,7 @@ package cn.wildfirechat.app.shiro;
 
 import cn.wildfirechat.app.RestResult;
 import com.google.gson.Gson;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -38,6 +39,9 @@ public class CsrfFilter extends OncePerRequestFilter {
     private static final Set<String> LOGIN_PATHS =
         new HashSet<>(Arrays.asList("/api/login", "/api/user/login"));
 
+    @Value("${wfc.all_client_support_ssl:false}")
+    private boolean allClientSupportSsl;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
@@ -46,8 +50,8 @@ public class CsrfFilter extends OncePerRequestFilter {
             token = UUID.randomUUID().toString();
             StringBuilder cookie = new StringBuilder();
             cookie.append(COOKIE_NAME).append('=').append(token)
-                .append("; Path=/; SameSite=Lax");
-            if (request.isSecure()) {
+                .append("; Path=/; SameSite=").append(allClientSupportSsl ? "None" : "Lax");
+            if (allClientSupportSsl || request.isSecure()) {
                 cookie.append("; Secure");
             }
             response.addHeader("Set-Cookie", cookie.toString());
